@@ -22,7 +22,7 @@
 
 ### Voice Pipeline
 
-- [ ] **VP-01**: Wake word detection ("JARVIS") with callback trigger
+- [ ] **VP-01**: Push-to-talk activation (space bar) - User holds space to activate listening
 - [ ] **VP-02**: Voice Activity Detection (VAD) for speech filtering
 - [ ] **VP-03**: Audio recorder with proper buffering
 - [ ] **VP-04**: Speech-to-text transcription (faster-whisper)

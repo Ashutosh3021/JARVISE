@@ -59,7 +59,7 @@ Plans:
 **Depends on:** Phase 2
 **Requirements:** VP-01, VP-02, VP-03, VP-04, VP-05, VP-06, VP-07
 **Success Criteria** (what must be TRUE):
-  1. Wake word "JARVIS" triggers voice listening when spoken
+  1. Push-to-talk (space bar) activates voice listening when pressed
   2. Voice Activity Detection filters out silence and noise
   3. Voice input is transcribed to text using faster-whisper
   4. Text response is spoken aloud using Kokoro TTS through speakers
