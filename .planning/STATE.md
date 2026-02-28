@@ -1,0 +1,96 @@
+# STATE: JARVIS
+
+**Project:** JARVIS - Windows AI Voice Assistant
+**Last Updated:** 2026-02-28
+
+---
+
+## Project Reference
+
+**Core Value:** A privacy-focused, always-available AI assistant that runs entirely locally on Windows, understanding context through vector memory and executing tasks through integrated system tools.
+
+**Current Focus:** Roadmap created - awaiting approval to begin Phase 1 planning
+
+---
+
+## Current Position
+
+| Attribute | Value |
+|-----------|-------|
+| **Phase** | Roadmap Created |
+| **Plan** | N/A |
+| **Status** | Planning |
+| **Progress** | 0% |
+
+---
+
+## Phase Progress
+
+| Phase | Status | Progress |
+|-------|--------|----------|
+| 1. Project Setup & Environment | Not started | 0% |
+| 2. Core Hardware Detection & Config | Not started | 0% |
+| 3. Voice Pipeline | Not started | 0% |
+| 4. Brain Layer | Not started | 0% |
+| 5. Memory System | Not started | 0% |
+| 6. System Tool Integrations | Not started | 0% |
+| 7. UI Layer | Not started | 0% |
+| 8. Boot Sequence & Main Loop | Not started | 0% |
+| 9. Test Suite Validation | Not started | 0% |
+| 10. Final Polish & Documentation | Not started | 0% |
+
+---
+
+## Performance Metrics
+
+| Metric | Value |
+|--------|-------|
+| **Total Requirements** | 59 |
+| **Completed Requirements** | 0 |
+| **Requirements In Progress** | 0 |
+| **Pending Requirements** | 59 |
+
+---
+
+## Accumulated Context
+
+### Key Decisions
+
+| Decision | Rationale | Status |
+|----------|-----------|--------|
+| Local-only LLM | Privacy-first, no API costs | Pending implementation |
+| ChromaDB + MEMORY.md | Vector search + human-editable facts | Pending implementation |
+| ReAct agent pattern | Proven for tool-calling agents | Pending implementation |
+| FastAPI + React UI | WebSocket streaming, modern UI | Pending implementation |
+
+### Technical Stack
+
+- **Language:** Python 3.11+
+- **LLM:** Ollama (local)
+- **STT:** faster-whisper
+- **TTS:** Kokoro
+- **Memory:** ChromaDB + MEMORY.md
+- **Browser:** Playwright
+- **UI:** FastAPI + React
+- **OS:** Windows
+
+### Watch Outs
+
+1. Blocking audio — Use async/await, run STT/TTS in executor
+2. Wake word false positives — Add VAD and confirmation before listening
+3. Context overflow — Implement sliding window for conversation history
+4. Memory persistence — Handle Windows paths and file locking
+5. Hardware fallback — Detect VRAM at startup, select appropriate model
+6. TTS overlap — Implement audio queue, ignore input during speech
+
+---
+
+## Session Continuity
+
+**Roadmap Status:** Approved
+**Next Action:** Begin Phase 1 planning with `/gsd-plan-phase 1`
+**User Approval:** Pending
+
+---
+
+*Last updated: 2026-02-28*
