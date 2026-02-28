@@ -14,7 +14,7 @@
 Plans:
 - [x] 01-project-setup-01-PLAN.md — Scaffold project with directory structure, dependencies, and configuration templates
 
-- [ ] **Phase 2: Core Hardware Detection & Config** - VRAM detection, config loader, logger
+- [x] **Phase 2: Core Hardware Detection & Config** - VRAM detection, config loader, logger (completed 2026-02-28)
   **Plans:** 3 plans
 
 Plans:
@@ -52,7 +52,7 @@ Plans:
   1. Application reports detected hardware (CPU/GPU, VRAM amount) at startup
   2. Configuration profile is automatically selected based on VRAM (CPU/Low GPU/Mid GPU/High GPU)
   3. Logs are written to both console and file with proper formatting
-**Plans:** 3 plans
+**Plans:** 3/3 plans complete
 
 ### Phase 3: Voice Pipeline
 **Goal:** Complete audio input/output pipeline with wake word detection
@@ -148,7 +148,7 @@ Plans:
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Project Setup & Environment | 1/1 | Complete    | 2026-02-28 |
-| 2. Core Hardware Detection & Config | 2/3 | In Progress | 2026-02-28 |
+| 2. Core Hardware Detection & Config | 2/3 | Complete    | 2026-02-28 |
 | 3. Voice Pipeline | 0/1 | Not started | - |
 | 4. Brain Layer | 0/1 | Not started | - |
 | 5. Memory System | 0/1 | Not started | - |
