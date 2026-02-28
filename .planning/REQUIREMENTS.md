@@ -15,7 +15,7 @@
 
 ### Hardware Detection
 
-- [ ] **HW-01**: Hardware detection module (CPU/GPU, VRAM measurement)
+- [x] **HW-01**: Hardware detection module (CPU/GPU, VRAM measurement)
 - [ ] **HW-02**: Configuration profile selection (CPU, Low GPU, Mid GPU, High GPU)
 - [ ] **HW-03**: .env configuration loader with validation
 - [ ] **HW-04**: Centralized logging system (console + file)
@@ -145,8 +145,9 @@
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| PS-01 to PS-05 | Phase 1 | Pending |
-| HW-01 to HW-04 | Phase 2 | Pending |
+| PS-01 to PS-05 | Phase 1 | Complete |
+| HW-01 | Phase 2 | Complete |
+| HW-02 to HW-04 | Phase 2 | Pending |
 | VP-01 to VP-07 | Phase 3 | Pending |
 | BL-01 to BL-06 | Phase 4 | Pending |
 | MS-01 to MS-04 | Phase 5 | Pending |
