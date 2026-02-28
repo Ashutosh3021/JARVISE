@@ -8,7 +8,12 @@
 
 ## Phases
 
-- [ ] **Phase 1: Project Setup & Environment** - Scaffold project with dependencies, requirements.txt, .env.example
+- [x] **Phase 1: Project Setup & Environment** - Scaffold project with dependencies, requirements.txt, .env.example
+  **Plans:** 1 plan
+
+Plans:
+- [x] 01-project-setup-01-PLAN.md — Scaffold project with directory structure, dependencies, and configuration templates
+
 - [ ] **Phase 2: Core Hardware Detection & Config** - VRAM detection, config loader, logger
 - [ ] **Phase 3: Voice Pipeline** - Wake word, STT, TTS
 - [ ] **Phase 4: Brain Layer** - LLM client, prompt builder, ReAct agent
@@ -136,7 +141,7 @@
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Project Setup & Environment | 0/1 | Not started | - |
+| 1. Project Setup & Environment | 1/1 | Planned | - |
 | 2. Core Hardware Detection & Config | 0/1 | Not started | - |
 | 3. Voice Pipeline | 0/1 | Not started | - |
 | 4. Brain Layer | 0/1 | Not started | - |
