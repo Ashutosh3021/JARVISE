@@ -3,8 +3,14 @@
 
 # Core dependencies
 pydantic>=2.0.0
+pydantic-settings>=2.0.0
 python-dotenv>=1.0.0
 pyyaml>=6.0.0
+
+# Hardware detection
+psutil>=5.9.0
+nvidia-ml-py>=13.0.0
+gpu-list>=0.1.0
 
 # Voice (STT/TTS)
 faster-whisper>=1.0.0
