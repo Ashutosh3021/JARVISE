@@ -20,7 +20,7 @@ Plans:
 Plans:
 - [x] 02-core-hardware-01-PLAN.md — Hardware detection module (CPU/GPU, VRAM)
 - [ ] 02-core-hardware-02-PLAN.md — Configuration system with profile selection
-- [ ] 02-core-hardware-03-PLAN.md — Centralized logging system
+- [x] 02-core-hardware-03-PLAN.md — Centralized logging system
 - [ ] **Phase 3: Voice Pipeline** - Wake word, STT, TTS
 - [ ] **Phase 4: Brain Layer** - LLM client, prompt builder, ReAct agent
 - [ ] **Phase 5: Memory System** - ChromaDB, MEMORY.md, MemoryManager
@@ -148,7 +148,7 @@ Plans:
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Project Setup & Environment | 1/1 | Complete    | 2026-02-28 |
-| 2. Core Hardware Detection & Config | 1/3 | In Progress | 2026-02-28 |
+| 2. Core Hardware Detection & Config | 2/3 | In Progress | 2026-02-28 |
 | 3. Voice Pipeline | 0/1 | Not started | - |
 | 4. Brain Layer | 0/1 | Not started | - |
 | 5. Memory System | 0/1 | Not started | - |
