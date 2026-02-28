@@ -1,0 +1,41 @@
+# JARVIS Requirements
+# Windows AI Voice Assistant
+
+# Core dependencies
+pydantic>=2.0.0
+python-dotenv>=1.0.0
+pyyaml>=6.0.0
+
+# Voice (STT/TTS)
+faster-whisper>=1.0.0
+kokoro>=0.9.0
+sounddevice>=0.4.0
+numpy>=1.24.0
+
+# LLM
+ollama>=0.1.0
+
+# Memory
+chromadb>=0.4.0
+sentence-transformers>=2.2.0
+
+# Tools
+playwright>=1.40.0
+google-api-python-client>=2.100.0
+msgraph-sdk>=1.0.0
+
+# UI
+fastapi>=0.109.0
+uvicorn[standard]>=0.27.0
+websockets>=12.0.0
+python-multipart>=0.0.6
+
+# Testing
+pytest>=8.0.0
+pytest-asyncio>=0.23.0
+pytest-cov>=4.1.0
+
+# Utilities
+loguru>=0.7.0
+aiofiles>=23.2.0
+httpx>=0.26.0
