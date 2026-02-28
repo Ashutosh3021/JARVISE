@@ -16,8 +16,8 @@
 ### Hardware Detection
 
 - [x] **HW-01**: Hardware detection module (CPU/GPU, VRAM measurement)
-- [ ] **HW-02**: Configuration profile selection (CPU, Low GPU, Mid GPU, High GPU)
-- [ ] **HW-03**: .env configuration loader with validation
+- [x] **HW-02**: Configuration profile selection (CPU, Low GPU, Mid GPU, High GPU)
+- [x] **HW-03**: .env configuration loader with validation
 - [ ] **HW-04**: Centralized logging system (console + file)
 
 ### Voice Pipeline
