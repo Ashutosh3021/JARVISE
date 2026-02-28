@@ -7,11 +7,11 @@
 
 ### Project Setup
 
-- [ ] **PS-01**: Project scaffold with directory structure (core/, voice/, brain/, memory/, tools/, ui/, data/, tests/)
-- [ ] **PS-02**: requirements.txt with pinned Python dependencies
-- [ ] **PS-03**: setup.py for virtual environment creation and installation
-- [ ] **PS-04**: .env.example template for API keys and configuration
-- [ ] **PS-05**: .gitignore excluding .env, cache, and model directories
+- [x] **PS-01**: Project scaffold with directory structure (core/, voice/, brain/, memory/, tools/, ui/, data/, tests/)
+- [x] **PS-02**: requirements.txt with pinned Python dependencies
+- [x] **PS-03**: setup.py for virtual environment creation and installation
+- [x] **PS-04**: .env.example template for API keys and configuration
+- [x] **PS-05**: .gitignore excluding .env, cache, and model directories
 
 ### Hardware Detection
 
