@@ -19,7 +19,7 @@ Plans:
 
 Plans:
 - [x] 02-core-hardware-01-PLAN.md — Hardware detection module (CPU/GPU, VRAM)
-- [ ] 02-core-hardware-02-PLAN.md — Configuration system with profile selection
+- [x] 02-core-hardware-02-PLAN.md — Configuration system with profile selection
 - [x] 02-core-hardware-03-PLAN.md — Centralized logging system
 - [ ] **Phase 3: Voice Pipeline** - Wake word, STT, TTS
 - [ ] **Phase 4: Brain Layer** - LLM client, prompt builder, ReAct agent
