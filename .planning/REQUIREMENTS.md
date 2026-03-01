@@ -32,12 +32,12 @@
 
 ### Brain Layer
 
-- [ ] **BL-01**: Local LLM client (Ollama) with streaming support
-- [ ] **BL-02**: Server health check for Ollama
-- [ ] **BL-03**: Prompt builder injecting MEMORY.md and vector context
-- [ ] **BL-04**: ReAct agent loop (Reason → Act → Observe → Repeat)
-- [ ] **BL-05**: Tool action parsing and execution
-- [ ] **BL-06**: Malformed output handling
+- [x] **BL-01**: Local LLM client (Ollama) with streaming support
+- [x] **BL-02**: Server health check for Ollama
+- [x] **BL-03**: Prompt builder injecting MEMORY.md and vector context
+- [x] **BL-04**: ReAct agent loop (Reason → Act → Observe → Repeat)
+- [x] **BL-05**: Tool action parsing and execution
+- [x] **BL-06**: Malformed output handling
 
 ### Memory System
 
@@ -146,10 +146,9 @@
 | Requirement | Phase | Status |
 |-------------|-------|--------|
 | PS-01 to PS-05 | Phase 1 | Complete |
-| HW-01 | Phase 2 | Complete |
-| HW-02 to HW-04 | Phase 2 | Pending |
+| HW-01 to HW-04 | Phase 2 | Complete |
 | VP-01 to VP-07 | Phase 3 | Complete |
-| BL-01 to BL-06 | Phase 4 | Pending |
+| BL-01 to BL-06 | Phase 4 | Complete |
 | MS-01 to MS-04 | Phase 5 | Pending |
 | ST-01 to ST-09 | Phase 6 | Pending |
 | UI-01 to UI-08 | Phase 7 | Pending |
@@ -158,10 +157,10 @@
 | DOC-01 to DOC-05 | Phase 10 | Pending |
 
 **Coverage:**
-- v1 requirements: 59 total
-- Mapped to phases: 59
+- v1 requirements: 65 total
+- Mapped to phases: 65
 - Unmapped: 0 ✓
 
 ---
 *Requirements defined: 2026-02-28*
-*Last updated: 2026-03-01 after Phase 3 complete*
+*Last updated: 2026-03-01 after Phase 4 Plan 1 complete*
