@@ -2,11 +2,11 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: unknown
-last_updated: "2026-02-28T16:34:05.827Z"
+status: in_progress
+last_updated: "2026-03-01T13:05:00.000Z"
 progress:
   total_phases: 3
-  completed_phases: 2
+  completed_phases: 3
   total_plans: 4
   completed_plans: 4
 ---
@@ -22,7 +22,7 @@ progress:
 
 **Core Value:** A privacy-focused, always-available AI assistant that runs entirely locally on Windows, understanding context through vector memory and executing tasks through integrated system tools.
 
-**Current Focus:** Phase 2: Core Hardware Detection & Config
+**Current Focus:** Phase 3: Voice Pipeline (Complete)
 
 ---
 
@@ -30,10 +30,10 @@ progress:
 
 | Attribute | Value |
 |-----------|-------|
-| **Phase** | 02-core-hardware |
+| **Phase** | 03-voice-pipeline |
 | **Plan** | 03 (Complete) |
-| **Status** | Executing |
-| **Progress** | 40% |
+| **Status** | Complete |
+| **Progress** | 100% |
 
 ---
 
@@ -42,8 +42,8 @@ progress:
 | Phase | Status | Progress |
 |-------|--------|----------|
 | 1. Project Setup & Environment | Complete | 100% |
-| 2. Core Hardware Detection & Config | In Progress | 67% |
-| 3. Voice Pipeline | Not started | 0% |
+| 2. Core Hardware Detection & Config | Complete | 100% |
+| 3. Voice Pipeline | Complete | 100% |
 | 4. Brain Layer | Not started | 0% |
 | 5. Memory System | Not started | 0% |
 | 6. System Tool Integrations | Not started | 0% |
@@ -59,12 +59,12 @@ progress:
 | Metric | Value |
 |--------|-------|
 | **Total Requirements** | 59 |
-| **Completed Requirements** | 2 |
+| **Completed Requirements** | 9 |
 | **Requirements In Progress** | 0 |
-| **Pending Requirements** | 57 |
+| **Pending Requirements** | 50 |
 
 ---
-| Phase 02-core-hardware P02 | 2 | 1 tasks | 1 files |
+| Phase 03-voice-pipeline P03 | 8 | 8 tasks | 9 files |
 
 ## Accumulated Context
 
@@ -77,6 +77,9 @@ progress:
 | ReAct agent pattern | Proven for tool-calling agents | Pending implementation |
 | FastAPI + React UI | WebSocket streaming, modern UI | Pending implementation |
 | Hardware detection | psutil + nvidia-ml-py + gpu-list | Implemented |
+| Push-to-talk via space bar | Privacy-focused, not always listening | Implemented |
+| WebRTC VAD with fallback | Windows compatibility without build tools | Implemented |
+| Kokoro TTS (bm_lewis) | Natural British male voice | Implemented |
 
 ### Technical Stack
 
@@ -84,12 +87,14 @@ progress:
 - **LLM:** Ollama (local)
 - **STT:** faster-whisper
 - **TTS:** Kokoro
+- **VAD:** WebRTC + energy fallback
 - **Memory:** ChromaDB + MEMORY.md
 - **Browser:** Playwright
 - **UI:** FastAPI + React
 - **OS:** Windows
 - **Hardware Detection:** psutil, nvidia-ml-py, gpu-list
 - **Logging:** loguru
+- **Voice Input:** keyboard, sounddevice
 
 ### Watch Outs
 
@@ -105,10 +110,10 @@ progress:
 ## Session Continuity
 
 **Roadmap Status:** Approved
-**Last Session:** 2026-02-28T16:34:05.823Z
-**Next Action:** Complete 02-core-hardware phase (2 more plans remaining)
+**Last Session:** 2026-03-01T13:05:00.000Z
+**Next Action:** Ready for Phase 4: Brain Layer
 
 ---
 
-*Last updated: 2026-02-28*
+*Last updated: 2026-03-01*
 

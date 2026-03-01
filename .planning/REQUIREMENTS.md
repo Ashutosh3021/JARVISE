@@ -22,13 +22,13 @@
 
 ### Voice Pipeline
 
-- [ ] **VP-01**: Push-to-talk activation (space bar) - User holds space to activate listening
-- [ ] **VP-02**: Voice Activity Detection (VAD) for speech filtering
-- [ ] **VP-03**: Audio recorder with proper buffering
-- [ ] **VP-04**: Speech-to-text transcription (faster-whisper)
-- [ ] **VP-05**: Text-to-speech synthesis (Kokoro)
-- [ ] **VP-06**: Audio output to speakers
-- [ ] **VP-07**: VoicePipeline unified class
+- [x] **VP-01**: Push-to-talk activation (space bar) - User holds space to activate listening
+- [x] **VP-02**: Voice Activity Detection (VAD) for speech filtering
+- [x] **VP-03**: Audio recorder with proper buffering
+- [x] **VP-04**: Speech-to-text transcription (faster-whisper)
+- [x] **VP-05**: Text-to-speech synthesis (Kokoro)
+- [x] **VP-06**: Audio output to speakers
+- [x] **VP-07**: VoicePipeline unified class
 
 ### Brain Layer
 
@@ -148,7 +148,7 @@
 | PS-01 to PS-05 | Phase 1 | Complete |
 | HW-01 | Phase 2 | Complete |
 | HW-02 to HW-04 | Phase 2 | Pending |
-| VP-01 to VP-07 | Phase 3 | Pending |
+| VP-01 to VP-07 | Phase 3 | Complete |
 | BL-01 to BL-06 | Phase 4 | Pending |
 | MS-01 to MS-04 | Phase 5 | Pending |
 | ST-01 to ST-09 | Phase 6 | Pending |
@@ -164,4 +164,4 @@
 
 ---
 *Requirements defined: 2026-02-28*
-*Last updated: 2026-02-28 after initial definition*
+*Last updated: 2026-03-01 after Phase 3 complete*

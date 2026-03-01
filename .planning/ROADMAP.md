@@ -21,7 +21,11 @@ Plans:
 - [x] 02-core-hardware-01-PLAN.md — Hardware detection module (CPU/GPU, VRAM)
 - [x] 02-core-hardware-02-PLAN.md — Configuration system with profile selection
 - [x] 02-core-hardware-03-PLAN.md — Centralized logging system
-- [ ] **Phase 3: Voice Pipeline** - Wake word, STT, TTS
+- [x] **Phase 3: Voice Pipeline** - Push-to-talk, STT, TTS, VAD (completed 2026-03-01)
+  **Plans:** 1 plan
+
+Plans:
+- [x] 03-voice-pipeline-03-PLAN.md — Complete audio input/output pipeline
 - [ ] **Phase 4: Brain Layer** - LLM client, prompt builder, ReAct agent
 - [ ] **Phase 5: Memory System** - ChromaDB, MEMORY.md, MemoryManager
 - [ ] **Phase 6: System Tool Integrations** - search, browser, filesystem, calendar, email
@@ -63,7 +67,7 @@ Plans:
   2. Voice Activity Detection filters out silence and noise
   3. Voice input is transcribed to text using faster-whisper
   4. Text response is spoken aloud using Kokoro TTS through speakers
-**Plans:** TBD
+**Plans:** 1/1 plans complete
 
 ### Phase 4: Brain Layer
 **Goal:** Local LLM integration with ReAct reasoning loop
@@ -148,8 +152,8 @@ Plans:
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Project Setup & Environment | 1/1 | Complete    | 2026-02-28 |
-| 2. Core Hardware Detection & Config | 2/3 | Complete    | 2026-02-28 |
-| 3. Voice Pipeline | 0/1 | Not started | - |
+| 2. Core Hardware Detection & Config | 3/3 | Complete    | 2026-02-28 |
+| 3. Voice Pipeline | 1/1 | Complete    | 2026-03-01 |
 | 4. Brain Layer | 0/1 | Not started | - |
 | 5. Memory System | 0/1 | Not started | - |
 | 6. System Tool Integrations | 0/1 | Not started | - |
@@ -160,4 +164,4 @@ Plans:
 
 ---
 
-*Last updated: 2026-02-28*
+*Last updated: 2026-03-01*
