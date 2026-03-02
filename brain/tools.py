@@ -145,4 +145,155 @@ def create_default_registry() -> ToolRegistry:
     return registry
 
 
-__all__ = ["ToolRegistry", "ToolExecutionError", "create_default_registry"]
+def create_tools_registry() -> ToolRegistry:
+    """Create a comprehensive registry with all JARVIS tools.
+    
+    This function imports and registers all available tools:
+    - browser: Web browsing and automation
+    - web_search: Web search functionality
+    - filesystem: File operations
+    - code_exec: Sandboxed code execution
+    - google_calendar: Google Calendar integration
+    - google_email: Google Email (Gmail) integration
+    - microsoft_outlook: Microsoft Outlook/Exchange integration
+    - system_monitor: System diagnostics (CPU, memory, disk, network)
+    
+    Returns:
+        ToolRegistry with all tools registered
+    """
+    from tools.browser import BrowserTool
+    from tools.web_search import WebSearchTool
+    from tools.filesystem import FilesystemTool
+    from tools.code_exec import CodeExecutionTool
+    from tools.google_calendar import GoogleCalendarTool
+    from tools.google_email import GoogleEmailTool
+    from tools.microsoft_outlook import MicrosoftOutlookTool
+    from tools.system_monitor import SystemMonitorTool
+    
+    registry = ToolRegistry()
+    
+    # Create tool instances
+    browser = BrowserTool()
+    web_search = WebSearchTool()
+    filesystem = FilesystemTool()
+    code_exec = CodeExecutionTool()
+    google_calendar = GoogleCalendarTool()
+    google_email = GoogleEmailTool()
+    microsoft_outlook = MicrosoftOutlookTool()
+    system_monitor = SystemMonitorTool()
+    
+    # Register browser tool
+    def execute_browser(args: dict) -> str:
+        """Execute browser tool action."""
+        action = args.get("action", "navigate")
+        url = args.get("url", "")
+        return browser.execute(action=action, url=url)
+    
+    registry.register(
+        "browser",
+        execute_browser,
+        "Navigate to URLs, extract content, fill forms, click elements"
+    )
+    
+    # Register web search tool
+    def execute_search(args: dict) -> str:
+        """Execute web search."""
+        query = args.get("query", "")
+        max_results = args.get("max_results", 10)
+        return web_search.execute(query=query, max_results=max_results)
+    
+    registry.register(
+        "web_search",
+        execute_search,
+        "Search the web using browser automation"
+    )
+    
+    # Register filesystem tool
+    def execute_filesystem(args: dict) -> str:
+        """Execute filesystem operation."""
+        action = args.get("action", "list")
+        path = args.get("path", ".")
+        return filesystem.execute(action=action, path=path)
+    
+    registry.register(
+        "filesystem",
+        execute_filesystem,
+        "Read, write, delete files. Requires user confirmation."
+    )
+    
+    # Register code execution tool
+    def execute_code(args: dict) -> str:
+        """Execute Python code."""
+        code = args.get("code", "")
+        return code_exec.execute(code=code)
+    
+    registry.register(
+        "execute_code",
+        execute_code,
+        "Run Python code in sandboxed environment"
+    )
+    
+    # Register Google Calendar tool
+    def execute_calendar(args: dict) -> str:
+        """Execute Google Calendar operation."""
+        action = args.get("action", "list_events")
+        return google_calendar.execute(action=action, **args)
+    
+    registry.register(
+        "google_calendar",
+        execute_calendar,
+        "List, create, update Google Calendar events"
+    )
+    
+    # Register Google Email tool
+    def execute_gmail(args: dict) -> str:
+        """Execute Google Email operation."""
+        action = args.get("action", "list_emails")
+        return google_email.execute(action=action, **args)
+    
+    registry.register(
+        "google_email",
+        execute_gmail,
+        "Read, send Google Email messages"
+    )
+    
+    # Register Microsoft Outlook tool
+    def execute_outlook(args: dict) -> str:
+        """Execute Microsoft Outlook operation."""
+        action = args.get("action", "list_emails")
+        return microsoft_outlook.execute(action=action, **args)
+    
+    registry.register(
+        "outlook",
+        execute_outlook,
+        "Read, send Microsoft Outlook emails via Microsoft Graph"
+    )
+    
+    # Register system monitor tool
+    def execute_monitor(args: dict) -> str:
+        """Execute system monitoring."""
+        action = args.get("action", "all")
+        return system_monitor.execute(action=action, **args)
+    
+    registry.register(
+        "system_monitor",
+        execute_monitor,
+        "Get CPU, memory, disk, network statistics"
+    )
+    
+    # Register get_time and get_date (built-in)
+    def get_time(args: dict) -> str:
+        from datetime import datetime
+        return datetime.now().strftime("%I:%M %p")
+    
+    def get_date(args: dict) -> str:
+        from datetime import datetime
+        return datetime.now().strftime("%A, %B %d, %Y")
+    
+    registry.register("get_time", get_time, "Get the current time")
+    registry.register("get_date", get_date, "Get the current date")
+    
+    return registry
+
+
+__all__ = ["ToolRegistry", "ToolExecutionError", "create_default_registry", "create_tools_registry"]
