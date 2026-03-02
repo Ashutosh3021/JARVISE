@@ -36,7 +36,7 @@ Plans:
   **Plans:** 3 plans
 
 Plans:
-- [ ] 06-01-PLAN.md — Core tools: web search, browser, filesystem, code exec
+- [x] 06-01-PLAN.md — Core tools: web search, browser, filesystem, code exec
 - [ ] 06-02-PLAN.md — Google Calendar and Email integrations with OAuth2
 - [ ] 06-03-PLAN.md — Microsoft Outlook, system monitor, tool registry
 - [ ] **Phase 7: UI Layer** - FastAPI backend, React frontend
@@ -166,7 +166,7 @@ Plans:
 | 3. Voice Pipeline | 1/1 | Complete    | 2026-03-01 |
 | 4. Brain Layer | 1/1 | Complete    | 2026-03-01 |
 | 5. Memory System | 0/1 | Not started | - |
-| 6. System Tool Integrations | 0/3 | Not started | - |
+| 6. System Tool Integrations | 1/3 | In Progress | - |
 | 7. UI Layer | 0/1 | Not started | - |
 | 8. Boot Sequence & Main Loop | 0/1 | Not started | - |
 | 9. Test Suite Validation | 0/1 | Not started | - |
