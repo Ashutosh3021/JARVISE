@@ -33,6 +33,12 @@ Plans:
 - [x] 04-BRAIN-LAYER-01-PLAN.md — Ollama client, prompt builder, ReAct agent, tools, errors
 - [ ] **Phase 5: Memory System** - ChromaDB, MEMORY.md, MemoryManager
 - [ ] **Phase 6: System Tool Integrations** - search, browser, filesystem, calendar, email
+  **Plans:** 3 plans
+
+Plans:
+- [ ] 06-01-PLAN.md — Core tools: web search, browser, filesystem, code exec
+- [ ] 06-02-PLAN.md — Google Calendar and Email integrations with OAuth2
+- [ ] 06-03-PLAN.md — Microsoft Outlook, system monitor, tool registry
 - [ ] **Phase 7: UI Layer** - FastAPI backend, React frontend
 - [ ] **Phase 8: Boot Sequence & Main Loop** - main.py entry point
 - [ ] **Phase 9: Test Suite Validation** - unit tests, integration tests
@@ -103,7 +109,7 @@ Plans:
   2. Browser automation can open pages and interact via Playwright
   3. Filesystem tool can read and write files to disk
   4. Calendar and email integrations connect and authenticate successfully
-**Plans:** TBD
+**Plans:** 3/3 plans
 
 ### Phase 7: UI Layer
 **Goal:** Web interface for monitoring and control
@@ -160,7 +166,7 @@ Plans:
 | 3. Voice Pipeline | 1/1 | Complete    | 2026-03-01 |
 | 4. Brain Layer | 1/1 | Complete    | 2026-03-01 |
 | 5. Memory System | 0/1 | Not started | - |
-| 6. System Tool Integrations | 0/1 | Not started | - |
+| 6. System Tool Integrations | 0/3 | Not started | - |
 | 7. UI Layer | 0/1 | Not started | - |
 | 8. Boot Sequence & Main Loop | 0/1 | Not started | - |
 | 9. Test Suite Validation | 0/1 | Not started | - |
