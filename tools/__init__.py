@@ -6,6 +6,9 @@ from tools.browser import BrowserTool, BrowserManager
 from tools.web_search import WebSearchTool
 from tools.filesystem import FilesystemTool
 from tools.code_exec import CodeExecutionTool
+from tools.google_calendar import GoogleCalendarTool
+from tools.google_email import GoogleEmailTool
+from tools.auth import TokenManager, GoogleOAuth
 
 __all__ = [
     "BaseTool",
@@ -16,4 +19,8 @@ __all__ = [
     "WebSearchTool",
     "FilesystemTool",
     "CodeExecutionTool",
+    "GoogleCalendarTool",
+    "GoogleEmailTool",
+    "TokenManager",
+    "GoogleOAuth",
 ]
