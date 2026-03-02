@@ -54,9 +54,9 @@
 - [ ] **ST-04**: Code execution tool (sandboxed subprocess)
 - [ ] **ST-05**: Google Calendar integration with OAuth2
 - [ ] **ST-06**: Google Email integration with OAuth2
-- [ ] **ST-07**: Microsoft Outlook integration
-- [ ] **ST-08**: System monitor tool (diagnostics)
-- [ ] **ST-09**: Tools registry for agent
+- [x] **ST-07**: Microsoft Outlook integration
+- [x] **ST-08**: System monitor tool (diagnostics)
+- [x] **ST-09**: Tools registry for agent
 
 ### UI Layer
 

@@ -32,7 +32,7 @@ Plans:
 Plans:
 - [x] 04-BRAIN-LAYER-01-PLAN.md — Ollama client, prompt builder, ReAct agent, tools, errors
 - [ ] **Phase 5: Memory System** - ChromaDB, MEMORY.md, MemoryManager
-- [ ] **Phase 6: System Tool Integrations** - search, browser, filesystem, calendar, email
+- [x] **Phase 6: System Tool Integrations** - search, browser, filesystem, calendar, email (completed 2026-03-02)
   **Plans:** 3 plans
 
 Plans:
@@ -109,7 +109,7 @@ Plans:
   2. Browser automation can open pages and interact via Playwright
   3. Filesystem tool can read and write files to disk
   4. Calendar and email integrations connect and authenticate successfully
-**Plans:** 3/3 plans
+**Plans:** 3/3 plans complete
 
 ### Phase 7: UI Layer
 **Goal:** Web interface for monitoring and control
@@ -166,7 +166,7 @@ Plans:
 | 3. Voice Pipeline | 1/1 | Complete    | 2026-03-01 |
 | 4. Brain Layer | 1/1 | Complete    | 2026-03-01 |
 | 5. Memory System | 0/1 | Not started | - |
-| 6. System Tool Integrations | 1/3 | In Progress | - |
+| 6. System Tool Integrations | 1/3 | Complete    | 2026-03-02 |
 | 7. UI Layer | 0/1 | Not started | - |
 | 8. Boot Sequence & Main Loop | 0/1 | Not started | - |
 | 9. Test Suite Validation | 0/1 | Not started | - |
