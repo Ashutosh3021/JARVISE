@@ -204,7 +204,8 @@ async def update_memory_file(update: MemoryFileUpdate) -> dict[str, Any]:
     """
     try:
         manager = get_memory_manager()
-        manager.memory_file.write_full_content(update.content)
+        # Use the internal _write_file method via the controller
+        manager.memory_file._write_file(update.content)
         return {
             "status": "success",
             "message": "Memory file updated successfully"
