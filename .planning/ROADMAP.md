@@ -120,7 +120,12 @@ Plans:
   2. React SPA loads in browser with dark theme
   3. Live token streaming displays in chat window
   4. System stats (CPU, memory, VRAM) display in status bar
-**Plans:** TBD
+**Plans:** 3 plans
+
+Plans:
+- [ ] 07-01-PLAN.md — FastAPI backend with WebSocket support
+- [ ] 07-02-PLAN.md — React SPA with dark theme foundation
+- [ ] 07-03-PLAN.md — Chat interface and live stats
 
 ### Phase 8: Boot Sequence & Main Loop
 **Goal:** Unified entry point that initializes all components
@@ -167,7 +172,7 @@ Plans:
 | 4. Brain Layer | 1/1 | Complete    | 2026-03-01 |
 | 5. Memory System | 0/1 | Not started | - |
 | 6. System Tool Integrations | 1/3 | Complete    | 2026-03-02 |
-| 7. UI Layer | 0/1 | Not started | - |
+| 7. UI Layer | 0/3 | Planned | - |
 | 8. Boot Sequence & Main Loop | 0/1 | Not started | - |
 | 9. Test Suite Validation | 0/1 | Not started | - |
 | 10. Final Polish & Documentation | 0/1 | Not started | - |
