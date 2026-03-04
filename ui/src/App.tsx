@@ -1,6 +1,9 @@
 import { useState } from 'react'
 import { useTheme } from './context/ThemeContext'
 import { StatusBar } from './components/StatusBar/StatusBar'
+import { ChatWindow } from './components/Chat/ChatWindow'
+import { InputToolbar } from './components/Toolbar/InputToolbar'
+import { useChatWebSocket } from './hooks/useChatWebSocket'
 import { 
   MessageSquare, 
   Settings, 
@@ -10,12 +13,23 @@ import {
   ChevronRight,
   Sun,
   Moon,
-  Headphones
+  Headphones,
+  Wifi,
+  WifiOff
 } from 'lucide-react'
 
 function App() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
   const { theme, toggleTheme } = useTheme()
+  
+  // Connect to WebSocket for chat
+  const { 
+    messages, 
+    isStreaming, 
+    isThinking, 
+    sendMessage, 
+    connectionStatus 
+  } = useChatWebSocket('ws://localhost:8000/ws/chat')
 
   const navItems = [
     { icon: MessageSquare, label: 'Chat', active: true },
@@ -92,15 +106,38 @@ function App() {
 
         {/* Main content area */}
         <main className="flex-1 flex flex-col overflow-hidden">
-          {/* Chat area placeholder */}
-          <div className="flex-1 flex items-center justify-center">
-            <div className="text-center">
-              <MessageSquare className="w-16 h-16 mx-auto text-gray-300 dark:text-gray-600 mb-4" />
-              <p className="text-gray-500 dark:text-gray-400">
-                Chat interface will appear here
-              </p>
-            </div>
+          {/* Connection status indicator */}
+          <div className="px-4 py-2 border-b border-gray-200 dark:border-gray-700 flex items-center gap-2">
+            {connectionStatus === 'connected' ? (
+              <>
+                <Wifi className="w-4 h-4 text-green-500" />
+                <span className="text-xs text-green-500">Connected</span>
+              </>
+            ) : connectionStatus === 'connecting' ? (
+              <>
+                <Wifi className="w-4 h-4 text-yellow-500 animate-pulse" />
+                <span className="text-xs text-yellow-500">Connecting...</span>
+              </>
+            ) : (
+              <>
+                <WifiOff className="w-4 h-4 text-red-500" />
+                <span className="text-xs text-red-500">Disconnected</span>
+              </>
+            )}
           </div>
+          
+          {/* Chat window */}
+          <ChatWindow 
+            messages={messages}
+            isStreaming={isStreaming}
+            isThinking={isThinking}
+          />
+          
+          {/* Input toolbar */}
+          <InputToolbar 
+            onSendMessage={sendMessage}
+            disabled={connectionStatus === 'connecting'}
+          />
         </main>
       </div>
 
