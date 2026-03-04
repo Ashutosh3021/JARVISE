@@ -120,7 +120,7 @@ Plans:
   2. React SPA loads in browser with dark theme
   3. Live token streaming displays in chat window
   4. System stats (CPU, memory, VRAM) display in status bar
-**Plans:** 3 plans
+**Plans:** 3/3 plans complete
 
 Plans:
 - [x] 07-01-PLAN.md — FastAPI backend with WebSocket support
