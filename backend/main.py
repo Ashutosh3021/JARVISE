@@ -47,10 +47,11 @@ def create_app() -> FastAPI:
     )
     
     # Import and include routers
-    from backend.api.routes import chat, memory
+    from backend.api.routes import chat, memory, stats
     
     app.include_router(chat.router, tags=["chat"])
     app.include_router(memory.router, prefix="/api", tags=["memory"])
+    app.include_router(stats.router, prefix="/api", tags=["stats"])
     
     @app.get("/")
     async def root():
