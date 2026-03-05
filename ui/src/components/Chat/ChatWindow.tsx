@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react'
 import { Message as MessageType } from '../../hooks/useChatWebSocket'
 import { Message } from './Message'
+import { Waveform } from '../Waveform/Waveform'
 
 interface ChatWindowProps {
   messages: MessageType[]
@@ -38,19 +39,13 @@ export function ChatWindow({ messages, isStreaming, isThinking }: ChatWindowProp
         <Message key={message.id} message={message} />
       ))}
 
-      {/* Thinking indicator (animated dots) */}
+      {/* Thinking indicator (animated waveform) */}
       {isThinking && !messages.some(m => m.isStreaming) && (
         <div className="flex gap-3">
           <div className="flex-shrink-0 w-8 h-8 rounded-full bg-slate-700 flex items-center justify-center">
             <span className="text-lg">🤖</span>
           </div>
-          <div className="bg-slate-700 rounded-2xl rounded-bl-sm px-4 py-3">
-            <div className="flex gap-1">
-              <span className="w-2.5 h-2.5 bg-teal-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
-              <span className="w-2.5 h-2.5 bg-teal-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
-              <span className="w-2.5 h-2.5 bg-teal-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
-            </div>
-          </div>
+          <Waveform isAnimating={isThinking} />
         </div>
       )}
 
