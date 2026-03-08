@@ -3,6 +3,7 @@
 **Project:** JARVIS - Windows AI Voice Assistant
 **Created:** 2026-02-28
 **Core Value:** A privacy-focused, always-available AI assistant that runs entirely locally on Windows, understanding context through vector memory and executing tasks through integrated system tools.
+**Hardware:** Ryzen 5 5000U, 16GB RAM, AMD Radeon (CPU-only), Target latency <3s
 
 ---
 
@@ -21,17 +22,21 @@ Plans:
 - [x] 02-core-hardware-01-PLAN.md — Hardware detection module (CPU/GPU, VRAM)
 - [x] 02-core-hardware-02-PLAN.md — Configuration system with profile selection
 - [x] 02-core-hardware-03-PLAN.md — Centralized logging system
+
 - [x] **Phase 3: Voice Pipeline** - Push-to-talk, STT, TTS, VAD (completed 2026-03-01)
   **Plans:** 1 plan
 
 Plans:
 - [x] 03-voice-pipeline-03-PLAN.md — Complete audio input/output pipeline
+
 - [x] **Phase 4: Brain Layer** - LLM client, prompt builder, ReAct agent (completed 2026-03-01)
   **Plans:** 1 plan
 
 Plans:
 - [x] 04-BRAIN-LAYER-01-PLAN.md — Ollama client, prompt builder, ReAct agent, tools, errors
+
 - [x] **Phase 5: Memory System** - ChromaDB, MEMORY.md, MemoryManager (completed 2026-03-02)
+
 - [x] **Phase 6: System Tool Integrations** - search, browser, filesystem, calendar, email (completed 2026-03-02)
   **Plans:** 3 plans
 
@@ -39,10 +44,38 @@ Plans:
 - [x] 06-01-PLAN.md — Core tools: web search, browser, filesystem, code exec
 - [ ] 06-02-PLAN.md — Google Calendar and Email integrations with OAuth2
 - [ ] 06-03-PLAN.md — Microsoft Outlook, system monitor, tool registry
+
 - [x] **Phase 7: UI Layer** - FastAPI backend, React frontend (completed 2026-03-04)
+  **Plans:** 3 plans
+
+Plans:
+- [x] 07-01-PLAN.md — FastAPI backend with WebSocket support
+- [x] 07-02-PLAN.md — React SPA with dark theme foundation
+- [x] 07-03-PLAN.md — Chat interface and live stats
+
+- [ ] **Phase 0: Performance Fixes** - Hardware-aware models, learning system
+  **Plans:** 2 plans
+
+Plans:
+- [ ] 00-01-PLAN.md — Hardware-aware STT/LLM model selection
+- [ ] 00-02-PLAN.md — Learning system (auto-retry + preference memory)
+
 - [ ] **Phase 8: Boot Sequence & Main Loop** - main.py entry point
+  **Plans:** 1 plan
+
+Plans:
+- [ ] 08-01-PLAN.md — Unified entry point with graceful shutdown
+
 - [ ] **Phase 9: Test Suite Validation** - unit tests, integration tests
 - [ ] **Phase 10: Final Polish & Documentation** - README, ARCHITECTURE.md, error handlers
+
+- [ ] **Phase 11: Polish & Reliability** - Text input, memory quality, interrupt handling
+  **Plans:** 3 plans
+
+Plans:
+- [ ] 11-01-PLAN.md — Text input fallback (GUI + CLI)
+- [ ] 11-02-PLAN.md — Memory quality + tool reliability
+- [ ] 11-03-PLAN.md — Voice interrupt handling
 
 ---
 
@@ -57,6 +90,9 @@ Plans:
   2. `.env` file can be created from `.env.example` template and loaded successfully
   3. Project directory structure exists with all required folders (core/, voice/, brain/, memory/, tools/, ui/, data/, tests/)
 **Plans:** 1/1 plans complete
+
+Plans:
+- [x] 08-01-PLAN.md — Unified entry point with graceful shutdown
 
 ### Phase 2: Core Hardware Detection & Config
 **Goal:** Detect hardware capabilities, load configuration, setup logging
@@ -137,7 +173,7 @@ Plans:
   3. Graceful shutdown handler stops all services cleanly on Ctrl+C
   4. ASCII startup banner displays JARVIS branding at launch
   5. Startup logs show initialization progress for each component
-**Plans:** TBD
+**Plans:** 1/1 plans complete
 
 ### Phase 9: Test Suite Validation
 **Goal:** Automated testing to verify component functionality
@@ -170,10 +206,10 @@ Plans:
 | 2. Core Hardware Detection & Config | 3/3 | Complete    | 2026-02-28 |
 | 3. Voice Pipeline | 1/1 | Complete    | 2026-03-01 |
 | 4. Brain Layer | 1/1 | Complete    | 2026-03-01 |
-| 5. Memory System | 0/1 | Not started | - |
+| 5. Memory System | 1/1 | Complete    | 2026-03-02 |
 | 6. System Tool Integrations | 1/3 | Complete    | 2026-03-02 |
 | 7. UI Layer | 3/3 | Complete    | 2026-03-04 |
-| 8. Boot Sequence & Main Loop | 0/1 | Not started | - |
+| 8. Boot Sequence & Main Loop | 1/1 | Complete    | 2026-03-08 |
 | 9. Test Suite Validation | 0/1 | Not started | - |
 | 10. Final Polish & Documentation | 0/1 | Not started | - |
 
