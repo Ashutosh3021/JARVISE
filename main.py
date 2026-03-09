@@ -21,6 +21,8 @@ from core.config import load_config
 
 # Import brain
 from brain.agent import ReActAgent
+from brain.router import CommandRouter
+from brain.tools import create_default_registry
 
 # Import memory
 from memory import MemoryManager
@@ -46,6 +48,7 @@ app_config = None
 memory_manager = None
 agent = None
 voice_pipeline = None
+router = None
 
 
 def setup_logging(verbose: bool = False):
@@ -115,7 +118,7 @@ def exception_handler(exc_type, exc_value, exc_traceback):
 
 def run_jarvis(args):
     """Main JARVIS run loop."""
-    global app_config, memory_manager, agent, voice_pipeline
+    global app_config, memory_manager, agent, voice_pipeline, router
     
     # Print banner
     print(BANNER)
@@ -153,6 +156,24 @@ def run_jarvis(args):
     logger.info("Initializing agent...")
     agent = ReActAgent()
     logger.info("Agent ready")
+    
+    # 4b. Initialize command router
+    if not args.disable_router:
+        logger.info("Initializing command router...")
+        tool_registry = create_default_registry()
+        router = CommandRouter(tool_registry=tool_registry)
+        logger.info("Command router ready")
+        
+        # Register router with API for stats
+        try:
+            from backend.api.routes.stats import set_router
+            set_router(router)
+            logger.info("Router stats registered with API")
+        except Exception as e:
+            logger.warning(f"Could not register router stats: {e}")
+    else:
+        router = None
+        logger.info("Command router disabled")
     
     # 5. Initialize voice (if not text-only mode)
     if not args.text_only:
@@ -195,9 +216,28 @@ def run_jarvis(args):
                 if not user_input:
                     continue
                 
-                # Process through agent
+                # Process through router or agent
                 logger.info(f"Processing: {user_input}")
-                response = agent.run(user_input)
+                
+                if router:
+                    # Use smart routing
+                    route_result = router.route(user_input)
+                    
+                    if route_result.route_type.value == "direct_tool":
+                        # Execute directly without LLM
+                        logger.info(f"Direct tool execution: {route_result.tool_name}")
+                        response = router.execute_direct(route_result)
+                    elif route_result.route_type.value == "llm_agent":
+                        # Explicitly requested LLM
+                        response = agent.run(user_input)
+                    else:
+                        # Unknown - default to LLM (safer)
+                        logger.info("Unknown command, routing to LLM")
+                        response = agent.run(user_input)
+                else:
+                    # Router disabled, use LLM
+                    response = agent.run(user_input)
+                
                 print(f"\nJARVIS: {response}")
                 
             except KeyboardInterrupt:
@@ -230,6 +270,11 @@ def main():
         "--verbose", "-v",
         action="store_true",
         help="Enable verbose logging"
+    )
+    parser.add_argument(
+        "--disable-router",
+        action="store_true",
+        help="Disable command router (always use LLM)"
     )
     
     args = parser.parse_args()
