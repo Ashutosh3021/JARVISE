@@ -90,4 +90,40 @@ async def get_current_stats() -> dict[str, Any]:
         raise HTTPException(status_code=500, detail=str(e))
 
 
-__all__ = ["router"]
+__all__ = ["router", "get_router_stats"]
+
+
+# Global router reference for stats
+_global_router = None
+
+
+def set_router(router):
+    """Set the global router instance for stats tracking."""
+    global _global_router
+    _global_router = router
+
+
+def get_router_stats():
+    """Get router statistics if available.
+    
+    Returns:
+        Router stats dict or None if not available
+    """
+    global _global_router
+    if _global_router is None:
+        return None
+    return _global_router.get_stats().to_dict()
+
+
+@router.get("/stats/router")
+async def get_router_stats_endpoint() -> dict[str, Any]:
+    """
+    Get router statistics.
+    
+    Returns:
+        Dict with direct tool vs LLM agent usage
+    """
+    stats = get_router_stats()
+    if stats is None:
+        return {"router": "not_initialized"}
+    return {"router": stats}
