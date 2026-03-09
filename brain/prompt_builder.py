@@ -4,9 +4,13 @@ JARVIS Brain Layer - Prompt Builder Module
 Assembles prompts with system instructions, memory context, and conversation history.
 """
 
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from loguru import logger
+
+# Import ContextInjector only for type hints (avoid circular import)
+if TYPE_CHECKING:
+    from context.injector import ContextInjector
 
 
 SYSTEM_PROMPT = """You are JARVIS, a helpful AI voice assistant that runs entirely locally on Windows.
@@ -46,10 +50,25 @@ class PromptBuilder:
         self,
         system_prompt: str | None = None,
         max_history: int = 10,
+        context_injector: "ContextInjector | None" = None,
     ):
         self.system_prompt = system_prompt or SYSTEM_PROMPT
         self.max_history = max_history
         self.conversation_history: list[dict[str, str]] = []
+        self._context_injector = context_injector
+
+    @property
+    def context_injector(self) -> "ContextInjector | None":
+        """Get the context injector."""
+        return self._context_injector
+
+    def set_context_injector(self, injector: "ContextInjector") -> None:
+        """Set the context injector for automatic context injection."""
+        self._context_injector = injector
+
+    def get_context_injector(self) -> "ContextInjector | None":
+        """Get the current context injector (alias for context_injector property)."""
+        return self._context_injector
 
     def add_message(self, role: str, content: str) -> None:
         """Add a message to conversation history."""
@@ -89,6 +108,14 @@ class PromptBuilder:
             "role": "system",
             "content": self.system_prompt
         })
+        
+        # Inject context if context_injector is set
+        if self._context_injector is not None:
+            context_summary = self._context_injector.get_context_summary()
+            messages.append({
+                "role": "system",
+                "content": f"## Environment Context\n{context_summary}"
+            })
         
         if memory_context:
             messages.append({
