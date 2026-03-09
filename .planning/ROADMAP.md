@@ -73,13 +73,15 @@ Plans:
 Plans:
 - [x] 10-01-PLAN.md — Final polish: README, ARCHITECTURE.md, CHANGELOG.md
 
-- [ ] **Phase 11: Polish & Reliability** - Text input, memory quality, interrupt handling
-  **Plans:** 3 plans
+- [ ] **Phase 11: Polish & Reliability** - Context awareness, command routing, learning engine, task chains, filtered memory
+  **Plans:** 5 plans
 
 Plans:
-- [ ] 11-01-PLAN.md — Text input fallback (GUI + CLI)
-- [ ] 11-02-PLAN.md — Memory quality + tool reliability
-- [ ] 11-03-PLAN.md — Voice interrupt handling
+- [ ] 11-01-PLAN.md — Context Engine (system context, project detection, app tracking)
+- [ ] 11-02-PLAN.md — Command Router (simple commands bypass LLM)
+- [ ] 11-03-PLAN.md — Learning Engine (retry + preference memory)
+- [ ] 11-04-PLAN.md — Task Chains (multi-step workflows)
+- [ ] 11-05-PLAN.md — Filtered Vector Memory (importance-based storage)
 
 ---
 
@@ -206,6 +208,26 @@ Plans:
 Plans:
 - [x] 10-01-PLAN.md — Final polish: README, ARCHITECTURE.md, CHANGELOG.md
 
+### Phase 11: Polish & Reliability
+**Goal:** Make JARVIS proactive, context-aware, and self-improving
+**Depends on:** Phase 10
+**Requirements:** CTX-01, CTX-02, CTX-03, CTX-04, ROU-01, ROU-02, ROU-03, ROU-04, LRN-01, LRN-02, LRN-03, LRN-04, CHN-01, CHN-02, CHN-03, CHN-04, MEM-01, MEM-02, MEM-03, MEM-04
+**Success Criteria** (what must be TRUE):
+  1. JARVIS knows environment context (directory, project, apps, git)
+  2. Simple commands bypass LLM for speed
+  3. Failed tools retry with alternatives automatically
+  4. User corrections are remembered across sessions
+  5. Multi-step task chains execute correctly
+  6. Memory stores only important content
+**Plans:** 5 plans
+
+Plans:
+- [ ] 11-01-PLAN.md — Context Engine (system context, project detection, app tracking)
+- [ ] 11-02-PLAN.md — Command Router (simple commands bypass LLM)
+- [ ] 11-03-PLAN.md — Learning Engine (retry + preference memory)
+- [ ] 11-04-PLAN.md — Task Chains (multi-step workflows)
+- [ ] 11-05-PLAN.md — Filtered Vector Memory (importance-based storage)
+
 ---
 
 ## Progress Table
@@ -222,6 +244,7 @@ Plans:
 | 8. Boot Sequence & Main Loop | 1/1 | Complete    | 2026-03-08 |
 | 9. Test Suite Validation | 1/1 | Complete    | 2026-03-08 |
 | 10. Final Polish & Documentation | 1/1 | Complete    | 2026-03-09 |
+| 11. Polish & Reliability | 0/5 | In Progress | - |
 
 ---
 
