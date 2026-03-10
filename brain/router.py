@@ -69,17 +69,30 @@ class CommandRouter:
     making JARVIS faster, cheaper, and more reliable.
     """
     
-    def __init__(self, tool_registry=None):
+    def __init__(self, tool_registry=None, use_preferences: bool = True):
         """
         Initialize the command router.
         
         Args:
             tool_registry: ToolRegistry instance for executing tools
+            use_preferences: Whether to use preference memory (default: True)
         """
         self.tool_registry = tool_registry
         self._direct_commands: dict[str, tuple[str, dict]] = {}
         self._learned_commands: dict[str, tuple[str, dict]] = {}
         self._stats = CommandStats()
+        
+        # Preference memory for learning
+        self._use_preferences = use_preferences
+        self._preference_memory = None
+        
+        if use_preferences:
+            try:
+                from learning import PreferenceMemory
+                self._preference_memory = PreferenceMemory()
+                logger.debug("Preference memory enabled")
+            except Exception as e:
+                logger.warning(f"Failed to initialize preference memory: {e}")
         
         # Load built-in direct commands
         self._load_builtin_commands()
@@ -184,6 +197,87 @@ class CommandRouter:
         self._learned_commands[normalized] = (tool_name, tool_args or {})
         logger.debug(f"Learned command: '{user_input}' -> {tool_name}")
     
+    def learn_correction(
+        self, 
+        trigger: str, 
+        correct_tool: str, 
+        correct_args: dict | None = None,
+        confidence: int = 7
+    ) -> None:
+        """
+        Learn from a user correction (when user corrects JARVIS's choice).
+        
+        Args:
+            trigger: The action/command that was corrected
+            correct_tool: The correct tool the user wanted
+            correct_args: The correct arguments
+            confidence: Confidence level (1-10)
+        """
+        if self._preference_memory is None:
+            logger.warning("Preference memory not enabled")
+            return
+        
+        self._preference_memory.learn(
+            trigger=trigger,
+            tool_name=correct_tool,
+            tool_args=correct_args or {},
+            confidence=confidence
+        )
+        
+        # Also add to learned commands
+        self.learn_command(trigger, correct_tool, correct_args)
+        logger.info(f"Learned correction: '{trigger}' -> {correct_tool}")
+    
+    def get_preferred_tool(self, trigger: str) -> dict | None:
+        """
+        Get the preferred tool for a trigger.
+        
+        Args:
+            trigger: The action/command to look up
+            
+        Returns:
+            Dict with tool_name and tool_args, or None
+        """
+        if self._preference_memory is None:
+            return None
+        
+        pref = self._preference_memory.get_preferred(trigger)
+        if pref:
+            return {
+                "tool_name": pref.tool_name,
+                "tool_args": pref.tool_args,
+                "confidence": pref.confidence,
+                "use_count": pref.use_count,
+            }
+        return None
+    
+    def forget_preference(self, trigger: str) -> bool:
+        """
+        Forget a learned preference.
+        
+        Args:
+            trigger: The trigger to forget
+            
+        Returns:
+            True if removed, False if not found
+        """
+        if self._preference_memory is None:
+            return False
+        
+        return self._preference_memory.forget(trigger)
+    
+    def get_preference_stats(self) -> dict | None:
+        """
+        Get preference memory statistics.
+        
+        Returns:
+            Dict with stats or None if preferences not enabled
+        """
+        if self._preference_memory is None:
+            return None
+        
+        return self._preference_memory.get_stats()
+    
     def route(self, user_input: str) -> RouterResult:
         """
         Route user input to appropriate handler.
@@ -199,7 +293,24 @@ class CommandRouter:
         # Normalize input
         normalized = user_input.lower().strip()
         
-        # Check learned commands first (highest priority)
+        # Check preference memory first (highest priority for learned preferences)
+        if self._preference_memory is not None:
+            pref = self._preference_memory.get_preferred(normalized)
+            if pref:
+                execution_time = (time.perf_counter() - start_time) * 1000
+                result = RouterResult(
+                    route_type=RouteType.DIRECT_TOOL,
+                    tool_name=pref.tool_name,
+                    tool_args=self._substitute_wildcards(pref.tool_args, user_input),
+                    confidence=pref.confidence / 10.0,  # Convert 1-10 to 0.1-1.0
+                    execution_time_ms=execution_time,
+                )
+                logger.info(f"Preference matched: '{user_input}' -> {pref.tool_name} (confidence: {pref.confidence}/10)")
+                self._stats.direct_tool_calls += 1
+                self._stats.total_execution_time_ms += execution_time
+                return result
+        
+        # Check learned commands (next priority)
         if normalized in self._learned_commands:
             tool_name, tool_args = self._learned_commands[normalized]
             execution_time = (time.perf_counter() - start_time) * 1000

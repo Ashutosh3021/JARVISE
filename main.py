@@ -171,6 +171,15 @@ def run_jarvis(args):
             logger.info("Router stats registered with API")
         except Exception as e:
             logger.warning(f"Could not register router stats: {e}")
+        
+        # Register router and registry with learning API
+        try:
+            from backend.api.routes.learn import set_tool_registry, set_command_router
+            set_tool_registry(tool_registry)
+            set_command_router(router)
+            logger.info("Learning API registered")
+        except Exception as e:
+            logger.warning(f"Could not register learning API: {e}")
     else:
         router = None
         logger.info("Command router disabled")

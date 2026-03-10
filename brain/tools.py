@@ -19,7 +19,7 @@ class ToolExecutionError(Exception):
 class ToolRegistry:
     """Registry for managing and executing tools."""
 
-    def __init__(self):
+    def __init__(self, use_cache: bool = True, use_retry: bool = True):
         self.tools: dict[str, dict[str, Any]] = {}
         self._action_pattern = re.compile(
             r"^Action:\s*(\w+)(?::\s*(.+))?$",
@@ -29,6 +29,29 @@ class ToolRegistry:
             r"^Thought:\s*(.+)$",
             re.MULTILINE | re.DOTALL
         )
+        
+        # Learning components
+        self._use_cache = use_cache
+        self._use_retry = use_retry
+        self._cache = None
+        self._retry_engine = None
+        
+        # Initialize learning components if enabled
+        if use_cache:
+            try:
+                from learning import ToolCache
+                self._cache = ToolCache()
+                logger.debug("Tool cache enabled")
+            except Exception as e:
+                logger.warning(f"Failed to initialize tool cache: {e}")
+        
+        if use_retry:
+            try:
+                from learning import RetryEngine
+                self._retry_engine = RetryEngine(self, max_retries=3)
+                logger.debug("Retry engine enabled")
+            except Exception as e:
+                logger.warning(f"Failed to initialize retry engine: {e}")
 
     def register(
         self,
@@ -79,21 +102,51 @@ class ToolRegistry:
         tool = self.tools[name_lower]
         func = tool["func"]
         
+        # Normalize args to dict
+        normalized_args = {}
         try:
             if args is None:
-                args = {}
+                normalized_args = {}
             elif isinstance(args, str):
                 try:
-                    args = json.loads(args)
+                    normalized_args = json.loads(args)
                 except json.JSONDecodeError:
                     return f"Error: Invalid JSON arguments for tool '{name}': {args}"
-            
-            if not isinstance(args, dict):
+            elif isinstance(args, dict):
+                normalized_args = args
+            else:
                 return f"Error: Tool '{name}' requires a dict of arguments, got {type(args)}"
+        except Exception as e:
+            return f"Error: Failed to process arguments for tool '{name}': {str(e)}"
+        
+        # Check cache first
+        if self._cache is not None:
+            cached_result = self._cache.get(name_lower, normalized_args)
+            if cached_result is not None:
+                logger.debug(f"Cache hit for tool '{name}'")
+                return cached_result
+        
+        # Execute with retry if enabled
+        if self._retry_engine is not None:
+            retry_result = self._retry_engine.execute_with_retry(name_lower, normalized_args)
             
-            result = func(args)
+            # Cache successful results
+            if self._cache is not None and retry_result.success:
+                self._cache.set(name_lower, normalized_args, retry_result.final_output, success=True)
+            
+            return retry_result.final_output
+        
+        # Direct execution (fallback)
+        try:
+            result = func(normalized_args)
+            result_str = str(result) if result is not None else "Tool executed successfully"
+            
+            # Cache successful results
+            if self._cache is not None and not result_str.startswith("Error:"):
+                self._cache.set(name_lower, normalized_args, result_str, success=True)
+            
             logger.debug(f"Tool '{name}' executed successfully")
-            return str(result) if result is not None else "Tool executed successfully"
+            return result_str
             
         except Exception as e:
             error_msg = f"Tool '{name}' failed: {str(e)}"
@@ -125,6 +178,45 @@ class ToolRegistry:
     def has_tool(self, name: str) -> bool:
         """Check if a tool is registered."""
         return name.lower() in self.tools
+    
+    def get_cache_stats(self) -> dict | None:
+        """Get tool cache statistics.
+        
+        Returns:
+            Dict with cache stats or None if cache not enabled
+        """
+        if self._cache is None:
+            return None
+        return self._cache.get_stats()
+    
+    def get_retry_stats(self) -> dict | None:
+        """Get retry engine statistics.
+        
+        Returns:
+            Dict with retry stats or None if retry not enabled
+        """
+        if self._retry_engine is None:
+            return None
+        return self._retry_engine.get_stats()
+    
+    def invalidate_cache(self, tool_name: str = None, args: dict = None) -> int:
+        """Invalidate cache entries.
+        
+        Args:
+            tool_name: Tool to invalidate (None = all)
+            args: Specific args to invalidate
+            
+        Returns:
+            Number of entries invalidated
+        """
+        if self._cache is None:
+            return 0
+        
+        if tool_name is None:
+            self._cache.clear_all()
+            return len(self._cache)
+        
+        return self._cache.invalidate(tool_name, args)
 
 
 def create_default_registry() -> ToolRegistry:
