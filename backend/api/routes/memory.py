@@ -266,4 +266,271 @@ async def get_memory_stats() -> dict[str, Any]:
         }
 
 
+# Filtered memory endpoints
+
+from memory.filtered_store import FilteredMemory, MemoryFilter, MemoryEntry
+from memory.importance import MemoryEntryType
+
+# Global filtered memory instance
+_filtered_memory: FilteredMemory | None = None
+
+
+def get_filtered_memory() -> FilteredMemory:
+    """Get or create the filtered memory instance."""
+    global _filtered_memory
+    if _filtered_memory is None:
+        _filtered_memory = FilteredMemory(
+            chroma_client=None,
+            threshold=0.3
+        )
+    return _filtered_memory
+
+
+class AddMemoryRequest(BaseModel):
+    """Request model for adding a memory entry."""
+    content: str
+    entry_type: str = "conversation"
+    metadata: dict[str, Any] | None = None
+    project: str | None = None
+    force_store: bool = False
+
+
+class SearchMemoryRequest(BaseModel):
+    """Request model for searching memory."""
+    q: str
+    entry_type: str | None = None
+    project: str | None = None
+    min_importance: float = 0.0
+    limit: int = 10
+
+
+class ClearMemoryRequest(BaseModel):
+    """Request model for clearing memory."""
+    project: str | None = None
+
+
+@router.post("/memory/add")
+async def add_memory(request: AddMemoryRequest) -> dict[str, Any]:
+    """
+    Add a memory entry with importance filtering.
+    
+    Args:
+        request: Memory entry data
+        
+    Returns:
+        Entry ID and importance score
+    """
+    try:
+        fm = get_filtered_memory()
+        
+        # Parse entry type
+        entry_type = MemoryEntryType(request.entry_type)
+        
+        # Add to filtered memory
+        entry_id = fm.add(
+            content=request.content,
+            entry_type=entry_type,
+            metadata=request.metadata,
+            project=request.project,
+            force_store=request.force_store
+        )
+        
+        if entry_id is None:
+            return {
+                "status": "rejected",
+                "message": "Content below importance threshold",
+                "entry_id": None,
+                "importance_score": None
+            }
+        
+        # Get the entry to return importance
+        results = fm.search(request.content, MemoryFilter(limit=1))
+        importance = results[0].importance if results else 0.0
+        
+        return {
+            "status": "success",
+            "entry_id": entry_id,
+            "importance_score": importance,
+            "message": "Memory stored successfully"
+        }
+    except Exception as e:
+        logger.error(f"Error adding memory: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/memory/search")
+async def search_memory(
+    q: str,
+    entry_type: str | None = None,
+    project: str | None = None,
+    min_importance: float = 0.0,
+    limit: int = 10
+) -> dict[str, Any]:
+    """
+    Search memory with filters.
+    
+    Args:
+        q: Search query
+        entry_type: Filter by entry type
+        project: Filter by project
+        min_importance: Minimum importance threshold
+        limit: Maximum results
+        
+    Returns:
+        List of matching memory entries
+    """
+    try:
+        fm = get_filtered_memory()
+        
+        # Build filter
+        filter = MemoryFilter(
+            entry_types=[MemoryEntryType(entry_type)] if entry_type else None,
+            projects=[project] if project else None,
+            min_importance=min_importance,
+            limit=limit
+        )
+        
+        results = fm.search(q, filter)
+        
+        return {
+            "status": "success",
+            "count": len(results),
+            "results": [
+                {
+                    "id": r.id,
+                    "content": r.content,
+                    "entry_type": r.entry_type.value,
+                    "importance": r.importance,
+                    "project": r.project,
+                    "created_at": r.created_at.isoformat(),
+                    "metadata": r.metadata
+                }
+                for r in results
+            ]
+        }
+    except Exception as e:
+        logger.error(f"Error searching memory: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/memory/recent")
+async def get_recent_memory(limit: int = 10) -> dict[str, Any]:
+    """
+    Get recent memory entries.
+    
+    Args:
+        limit: Maximum number of entries
+        
+    Returns:
+        List of recent memories
+    """
+    try:
+        fm = get_filtered_memory()
+        results = fm.get_recent(limit=limit)
+        
+        return {
+            "status": "success",
+            "count": len(results),
+            "results": [
+                {
+                    "id": r.id,
+                    "content": r.content,
+                    "entry_type": r.entry_type.value,
+                    "importance": r.importance,
+                    "project": r.project,
+                    "created_at": r.created_at.isoformat()
+                }
+                for r in results
+            ]
+        }
+    except Exception as e:
+        logger.error(f"Error getting recent memory: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.delete("/memory/{entry_id}")
+async def delete_memory_entry(entry_id: str) -> dict[str, Any]:
+    """
+    Delete a specific memory entry.
+    
+    Args:
+        entry_id: ID of entry to delete
+        
+    Returns:
+        Deletion status
+    """
+    try:
+        fm = get_filtered_memory()
+        deleted = fm.delete(entry_id)
+        
+        return {
+            "status": "success" if deleted else "not_found",
+            "deleted": deleted,
+            "message": f"Entry {'deleted' if deleted else 'not found'}"
+        }
+    except Exception as e:
+        logger.error(f"Error deleting memory: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/memory/clear")
+async def clear_memory(request: ClearMemoryRequest) -> dict[str, Any]:
+    """
+    Clear memory entries.
+    
+    Args:
+        request: Clear request with optional project filter
+        
+    Returns:
+        Clear status
+    """
+    try:
+        fm = get_filtered_memory()
+        
+        if request.project:
+            # Clear specific project
+            entries = fm.get_by_project(request.project)
+            deleted = 0
+            for entry in entries:
+                if fm.delete(entry.id):
+                    deleted += 1
+        else:
+            # Clear all - need to get all entries first
+            entries = fm.get_recent(limit=1000)
+            deleted = 0
+            for entry in entries:
+                if fm.delete(entry.id):
+                    deleted += 1
+        
+        return {
+            "status": "success",
+            "deleted": deleted,
+            "message": f"Cleared {deleted} entries"
+        }
+    except Exception as e:
+        logger.error(f"Error clearing memory: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/memory/filtered-stats")
+async def get_filtered_stats() -> dict[str, Any]:
+    """
+    Get filtered memory statistics.
+    
+    Returns:
+        Statistics about filtered memory
+    """
+    try:
+        fm = get_filtered_memory()
+        stats = fm.get_stats()
+        
+        return {
+            "status": "success",
+            "stats": stats
+        }
+    except Exception as e:
+        logger.error(f"Error getting filtered stats: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 __all__ = ["router"]
