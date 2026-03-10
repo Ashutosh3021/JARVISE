@@ -19,6 +19,7 @@ class RouteType(Enum):
     """Types of routing decisions."""
     DIRECT_TOOL = "direct_tool"  # Execute via tool directly
     LLM_AGENT = "llm_agent"     # Process through LLM
+    CHAIN = "chain"              # Execute as multi-step chain
     UNKNOWN = "unknown"          # Unknown command, default to LLM
 
 
@@ -28,6 +29,8 @@ class RouterResult:
     route_type: RouteType
     tool_name: str | None = None
     tool_args: dict | None = None
+    chain_name: str | None = None
+    chain_steps: list[dict] | None = None
     response: str | None = None
     confidence: float = 0.0
     execution_time_ms: float | None = None
@@ -96,6 +99,51 @@ class CommandRouter:
         
         # Load built-in direct commands
         self._load_builtin_commands()
+        self._load_chain_patterns()
+    
+    def _load_chain_patterns(self) -> None:
+        """Load chain trigger patterns for multi-step workflows."""
+        # Chain trigger patterns - these indicate multi-step workflows
+        self._chain_patterns = [
+            (r"research\s+(.+?)\s+and\s+summarize", "research_and_summarize"),
+            (r"search\s+(.+?)\s+and\s+save", "search_and_save"),
+            (r"find\s+(.+?)\s+and\s+replace", "find_and_replace"),
+            (r"look\s+up\s+(.+?)\s+then\s+(.+)", None),  # Custom chain
+            (r"do\s+(.+?),\s+then\s+(.+?),\s+then\s+(.+)", None),  # Custom chain
+            (r"(.+?)\s+and\s+(.+?)\s+and\s+(.+)", None),  # 3+ step custom
+        ]
+        
+        # Known chain template triggers
+        self._template_triggers = {
+            "research": "research_and_summarize",
+            "research and summarize": "research_and_summarize",
+            "find and replace": "find_and_replace",
+            "find and replace in": "find_and_replace",
+            "search and save": "search_and_save",
+            "search and save to": "search_and_save",
+        }
+    
+    def _detect_chain_request(self, normalized: str) -> tuple[str | None, list[dict] | None]:
+        """
+        Detect if input is a chain request.
+        
+        Returns:
+            Tuple of (template_name, parsed_steps) or (None, None)
+        """
+        # Check template triggers
+        for trigger, template in self._template_triggers.items():
+            if trigger in normalized:
+                return template, None
+        
+        # Check regex patterns
+        import re
+        for pattern, template_name in self._chain_patterns:
+            match = re.search(pattern, normalized)
+            if match:
+                # Return template name or None for custom chains
+                return template_name, None
+        
+        return None, None
     
     def _load_builtin_commands(self) -> None:
         """Load built-in direct command patterns."""
@@ -374,6 +422,20 @@ class CommandRouter:
             self._stats.total_execution_time_ms += execution_time
             return result
         
+        # Check for chain requests (multi-step workflows)
+        chain_template, chain_steps = self._detect_chain_request(normalized)
+        if chain_template or chain_steps:
+            execution_time = (time.perf_counter() - start_time) * 1000
+            result = RouterResult(
+                route_type=RouteType.CHAIN,
+                chain_name=chain_template,
+                chain_steps=chain_steps,
+                confidence=0.9,
+                execution_time_ms=execution_time,
+            )
+            logger.info(f"Chain request detected: '{user_input}' -> {chain_template or 'custom'}")
+            return result
+        
         # Check if it's explicitly requesting LLM
         if any(phrase in normalized for phrase in ["why", "how do i", "explain", "what is", "what are", "help me", "write code", "create"]):
             execution_time = (time.perf_counter() - start_time) * 1000
@@ -535,6 +597,52 @@ class CommandRouter:
         
         # All fallbacks failed
         return f"Error: Could not execute command. No fallback available."
+    
+    def execute_chain(self, result: RouterResult, user_input: str | None = None) -> str:
+        """
+        Execute a chain request.
+        
+        Args:
+            result: RouterResult from route() with CHAIN type
+            user_input: Original user input for custom chains
+            
+        Returns:
+            Chain execution result
+        """
+        if result.route_type != RouteType.CHAIN:
+            return f"Error: Cannot execute_chain on {result.route_type.value}"
+        
+        try:
+            from brain.chains import TaskChain
+            
+            chain = TaskChain(
+                agent=self.tool_registry.llm if self.tool_registry else None,
+                tool_registry=self.tool_registry,
+            )
+            
+            # Use template or custom steps
+            if result.chain_name:
+                template = chain.get_template(result.chain_name)
+                if not template:
+                    return f"Error: Template '{result.chain_name}' not found"
+                steps = template
+            elif result.chain_steps:
+                steps = result.chain_steps
+            elif user_input:
+                # Parse from user input
+                parsed = chain.parse_chain_request(user_input)
+                steps = [{"action": s.action, "input": s.input} for s in parsed]
+            else:
+                return "Error: No chain steps or template provided"
+            
+            # Execute the chain
+            chain_result = chain.execute_chain(steps)
+            return chain_result.final_output
+            
+        except Exception as e:
+            error_msg = f"Chain execution failed: {str(e)}"
+            logger.error(error_msg)
+            return f"Error: {error_msg}"
     
     def get_stats(self) -> CommandStats:
         """Get router statistics."""
