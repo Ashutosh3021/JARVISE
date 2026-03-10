@@ -222,8 +222,8 @@ Plans:
 **Plans:** 5 plans
 
 Plans:
-- [ ] 11-01-PLAN.md — Context Engine (system context, project detection, app tracking)
-- [ ] 11-02-PLAN.md — Command Router (simple commands bypass LLM)
+- [x] 11-01-PLAN.md — Context Engine (system context, project detection, app tracking)
+- [x] 11-02-PLAN.md — Command Router (simple commands bypass LLM)
 - [ ] 11-03-PLAN.md — Learning Engine (retry + preference memory)
 - [ ] 11-04-PLAN.md — Task Chains (multi-step workflows)
 - [ ] 11-05-PLAN.md — Filtered Vector Memory (importance-based storage)
@@ -244,8 +244,8 @@ Plans:
 | 8. Boot Sequence & Main Loop | 1/1 | Complete    | 2026-03-08 |
 | 9. Test Suite Validation | 1/1 | Complete    | 2026-03-08 |
 | 10. Final Polish & Documentation | 1/1 | Complete    | 2026-03-09 |
-| 11. Polish & Reliability | 0/5 | In Progress | - |
+| 11. Polish & Reliability | 2/5 | In Progress | - |
 
 ---
 
-*Last updated: 2026-03-09*
+*Last updated: 2026-03-10*
