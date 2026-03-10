@@ -2,6 +2,7 @@
 JARVIS Memory Manager
 
 Unified interface for both vector store (ChromaDB) and file-based (MEMORY.md) storage.
+Includes filtered memory for importance-based storage.
 """
 
 from typing import Any
@@ -9,6 +10,8 @@ from typing import Any
 from core.config import Config
 
 from memory.chroma_store import VectorStore
+from memory.filtered_store import FilteredMemory, MemoryFilter
+from memory.importance import MemoryEntryType
 from memory.memory_file import MemoryFileController
 
 
@@ -43,6 +46,7 @@ class MemoryManager:
         self.config = config
         self._vector_store = None
         self._memory_file = None
+        self._filtered_memory = None
     
     @property
     def vector_store(self) -> VectorStore:
@@ -61,6 +65,16 @@ class MemoryManager:
                 file_path=self.config.memory_file
             )
         return self._memory_file
+    
+    @property
+    def filtered_memory(self) -> FilteredMemory:
+        """Lazy-initialize the filtered memory."""
+        if self._filtered_memory is None:
+            self._filtered_memory = FilteredMemory(
+                chroma_client=self.vector_store,
+                threshold=0.3
+            )
+        return self._filtered_memory
     
     def save_conversation(
         self,
@@ -301,6 +315,90 @@ class MemoryManager:
             Number of entries deleted
         """
         return self.vector_store.delete_session(session_id)
+    
+    def add_filtered(
+        self,
+        content: str,
+        entry_type: str = "conversation",
+        project: str | None = None,
+        force_store: bool = False
+    ) -> str | None:
+        """
+        Add content to filtered memory with importance scoring.
+        
+        Args:
+            content: Content to store
+            entry_type: Type of entry (conversation, fact, code, project, note, decision)
+            project: Project name (auto-detected if None)
+            force_store: Store regardless of importance threshold
+            
+        Returns:
+            Entry ID if stored, None if rejected
+        """
+        entry_type_enum = MemoryEntryType(entry_type)
+        return self.filtered_memory.add(
+            content=content,
+            entry_type=entry_type_enum,
+            project=project,
+            force_store=force_store
+        )
+    
+    def get_important_context(
+        self,
+        query: str,
+        project: str | None = None,
+        limit: int = 5
+    ) -> list[dict[str, Any]]:
+        """
+        Get high-importance memories for context.
+        
+        Prioritizes decisions and facts, returns most relevant for current project.
+        
+        Args:
+            query: Search query
+            project: Filter by project (uses current project if None)
+            limit: Maximum number of results
+            
+        Returns:
+            List of important memory entries
+        """
+        # Build filter prioritizing important types
+        filter = MemoryFilter(
+            entry_types=[
+                MemoryEntryType.DECISION,
+                MemoryEntryType.FACT,
+                MemoryEntryType.NOTE,
+                MemoryEntryType.PROJECT,
+                MemoryEntryType.CODE,
+                MemoryEntryType.CONVERSATION
+            ],
+            projects=[project] if project else None,
+            min_importance=0.3,  # Only get important entries
+            limit=limit
+        )
+        
+        results = self.filtered_memory.search(query, filter)
+        
+        return [
+            {
+                "id": r.id,
+                "content": r.content,
+                "entry_type": r.entry_type.value,
+                "importance": r.importance,
+                "project": r.project,
+                "created_at": r.created_at.isoformat()
+            }
+            for r in results
+        ]
+    
+    def get_filtered_stats(self) -> dict[str, Any]:
+        """
+        Get filtered memory statistics.
+        
+        Returns:
+            Statistics about filtered memory
+        """
+        return self.filtered_memory.get_stats()
     
     def get_stats(self) -> dict[str, Any]:
         """
