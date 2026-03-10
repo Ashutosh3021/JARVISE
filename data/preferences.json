@@ -1,0 +1,22 @@
+{
+  "open editor": {
+    "trigger": "open editor",
+    "tool_name": "vscode",
+    "tool_args": {},
+    "confidence": 6,
+    "created_at": "2026-03-10T17:23:14.356180",
+    "last_used": "2026-03-10T17:26:40.819045",
+    "use_count": 2
+  },
+  "test command": {
+    "trigger": "test command",
+    "tool_name": "browser",
+    "tool_args": {
+      "url": "test"
+    },
+    "confidence": 7,
+    "created_at": "2026-03-10T17:29:00.192075",
+    "last_used": "2026-03-10T17:29:00.192075",
+    "use_count": 1
+  }
+}
