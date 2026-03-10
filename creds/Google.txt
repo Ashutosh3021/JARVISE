@@ -1,0 +1,1 @@
+gets your "GOOGLE_CALENDAR_CREDS_PATH" and "GOOGLE_EMAIL_CREDS_PATH" from google cloude console.
