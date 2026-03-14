@@ -7,6 +7,7 @@ import sys
 import signal
 import argparse
 import threading
+import time
 from pathlib import Path
 
 # Add project root to path
@@ -154,13 +155,13 @@ def run_jarvis(args):
     
     # 4. Initialize agent
     logger.info("Initializing agent...")
-    agent = ReActAgent()
+    tool_registry = create_default_registry()
+    agent = ReActAgent(tool_registry=tool_registry)
     logger.info("Agent ready")
     
     # 4b. Initialize command router
     if not args.disable_router:
         logger.info("Initializing command router...")
-        tool_registry = create_default_registry()
         router = CommandRouter(tool_registry=tool_registry)
         logger.info("Command router ready")
         
@@ -256,6 +257,17 @@ def run_jarvis(args):
                 print(f"\nError: {e}")
         
         logger.info("Exiting text-only mode")
+    
+    else:
+        # Voice mode - keep the program running
+        logger.info("JARVIS is ready! (Voice mode)")
+        logger.info("Press Ctrl+C to exit")
+        
+        try:
+            while True:
+                time.sleep(1)
+        except KeyboardInterrupt:
+            logger.info("Shutting down...")
 
 
 def main():

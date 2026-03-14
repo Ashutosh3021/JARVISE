@@ -2,10 +2,55 @@ import { useState, FormEvent, useRef } from 'react'
 import { 
   Send, 
   Mic, 
+  MicOff,
   Paperclip, 
   Smile,
   X
 } from 'lucide-react'
+
+// Web Speech API types
+interface SpeechRecognitionEvent extends Event {
+  results: SpeechRecognitionResultList
+  resultIndex: number
+}
+
+interface SpeechRecognitionResultList {
+  length: number
+  item(index: number): SpeechRecognitionResult
+  [index: number]: SpeechRecognitionResult
+}
+
+interface SpeechRecognitionResult {
+  length: number
+  item(index: number): SpeechRecognitionAlternative
+  [index: number]: SpeechRecognitionAlternative
+  isFinal: boolean
+}
+
+interface SpeechRecognitionAlternative {
+  transcript: string
+  confidence: number
+}
+
+interface SpeechRecognition extends EventTarget {
+  continuous: boolean
+  interimResults: boolean
+  lang: string
+  onstart: (() => void) | null
+  onresult: ((event: SpeechRecognitionEvent) => void) | null
+  onerror: ((event: Event) => void) | null
+  onend: (() => void) | null
+  start(): void
+  stop(): void
+  abort(): void
+}
+
+declare global {
+  interface Window {
+    SpeechRecognition: new () => SpeechRecognition
+    webkitSpeechRecognition: new () => SpeechRecognition
+  }
+}
 
 interface InputToolbarProps {
   onSendMessage: (message: string) => void
@@ -14,7 +59,9 @@ interface InputToolbarProps {
 
 export function InputToolbar({ onSendMessage, disabled }: InputToolbarProps) {
   const [input, setInput] = useState('')
+  const [isRecording, setIsRecording] = useState(false)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
+  const recognitionRef = useRef<SpeechRecognition | null>(null)
 
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault()
@@ -46,8 +93,48 @@ export function InputToolbar({ onSendMessage, disabled }: InputToolbarProps) {
   }
 
   const handleVoiceClick = () => {
-    // Placeholder for voice integration
-    console.log('Voice button clicked - voice integration coming soon')
+    if (isRecording) {
+      // Stop recording
+      if (recognitionRef.current) {
+        recognitionRef.current.stop()
+      }
+      setIsRecording(false)
+    } else {
+      // Start recording
+      const SpeechRecognition = window.SpeechRecognition || (window as any).webkitSpeechRecognition
+      if (!SpeechRecognition) {
+        alert('Speech recognition not supported in this browser')
+        return
+      }
+      
+      const recognition = new SpeechRecognition()
+      recognition.continuous = false
+      recognition.interimResults = true
+      recognition.lang = 'en-US'
+      
+      recognition.onstart = () => {
+        setIsRecording(true)
+      }
+      
+      recognition.onresult = (event: SpeechRecognitionEvent) => {
+        const transcript = Array.from(event.results)
+          .map(result => result[0].transcript)
+          .join('')
+        setInput(prev => prev + transcript)
+      }
+      
+      recognition.onerror = (event: any) => {
+        console.error('Speech recognition error:', event.error || event)
+        setIsRecording(false)
+      }
+      
+      recognition.onend = () => {
+        setIsRecording(false)
+      }
+      
+      recognition.start()
+      recognitionRef.current = recognition
+    }
   }
 
   const handleFileClick = () => {
@@ -72,10 +159,14 @@ export function InputToolbar({ onSendMessage, disabled }: InputToolbarProps) {
             type="button"
             onClick={handleVoiceClick}
             disabled={disabled}
-            className="p-2.5 rounded-lg text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 hover:bg-gray-200 dark:hover:bg-slate-dark-active transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-            title="Voice input"
+            className={`p-2.5 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
+              isRecording 
+                ? 'bg-red-500 text-white animate-pulse' 
+                : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 hover:bg-gray-200 dark:hover:bg-slate-dark-active'
+            }`}
+            title={isRecording ? "Stop recording" : "Voice input"}
           >
-            <Mic className="w-5 h-5" />
+            {isRecording ? <MicOff className="w-5 h-5" /> : <Mic className="w-5 h-5" />}
           </button>
           
           <button

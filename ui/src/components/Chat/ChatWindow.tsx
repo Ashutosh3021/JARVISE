@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react'
-import { Message as MessageType } from '../../hooks/useChatWebSocket'
+import { ChatMessage as MessageType } from '../../hooks/useChatWebSocket'
 import { Message } from './Message'
-import { Waveform } from '../Waveform/Waveform'
+import Waveform from '../Waveform/Waveform'
 
 interface ChatWindowProps {
   messages: MessageType[]

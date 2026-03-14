@@ -14,13 +14,14 @@ from backend.api.websocket.manager import manager
 
 # Import the ReActAgent from brain
 from brain.agent import ReActAgent
+from brain.tools import create_default_registry
 
 
 router = APIRouter()
 
 
-# Global agent instance
-agent = ReActAgent()
+# Global agent instance - with tools!
+agent = ReActAgent(tool_registry=create_default_registry())
 
 
 @router.websocket("/ws/chat")

@@ -49,6 +49,19 @@ class STTEngine:
             logger.info(f"STT model loaded: {self._model_size}")
         except Exception as e:
             logger.error(f"Failed to load STT model: {e}")
+            # Fallback to float32 if current compute_type fails (common on CPU)
+            if self._compute_type in ("float16", "int8"):
+                logger.info(f"Falling back to float32 compute type")
+                try:
+                    self._model = WhisperModel(
+                        self._model_size,
+                        device=self._device,
+                        compute_type="float32"
+                    )
+                    logger.info(f"STT model loaded with float32: {self._model_size}")
+                    return
+                except Exception as fallback_error:
+                    logger.error(f"Fallback to float32 also failed: {fallback_error}")
             # Fallback to CPU if CUDA fails
             if self._device == "cuda":
                 logger.info("Falling back to CPU")

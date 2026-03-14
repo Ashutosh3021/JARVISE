@@ -9,6 +9,8 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
+from pathlib import Path
 
 from loguru import logger
 
@@ -54,6 +56,12 @@ def create_app() -> FastAPI:
     app.include_router(stats.router, prefix="/api", tags=["stats"])
     app.include_router(learn.router, prefix="/api", tags=["learn"])
     app.include_router(chains.router, prefix="/api", tags=["chains"])
+    
+    # Serve UI static files
+    ui_path = Path(__file__).parent.parent / "ui" / "dist"
+    if ui_path.exists():
+        app.mount("/", StaticFiles(directory=str(ui_path), html=True), name="ui")
+        logger.info(f"Serving UI from: {ui_path}")
     
     @app.get("/")
     async def root():

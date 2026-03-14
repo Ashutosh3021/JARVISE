@@ -21,37 +21,21 @@ class ToolRegistry:
 
     def __init__(self, use_cache: bool = True, use_retry: bool = True):
         self.tools: dict[str, dict[str, Any]] = {}
+        # Only match Action: toolname or Action: toolname: {json}
         self._action_pattern = re.compile(
-            r"^Action:\s*(\w+)(?::\s*(.+))?$",
+            r"^Action:\s*(\w+)(?:\s*:\s*(\{.+\}|\[.+\]))?$",
             re.MULTILINE | re.IGNORECASE
         )
         self._thought_pattern = re.compile(
-            r"^Thought:\s*(.+)$",
+            r"^Thought:\s*(.+?)(?=\nAction:|\n\n|\Z)",
             re.MULTILINE | re.DOTALL
         )
         
-        # Learning components
-        self._use_cache = use_cache
-        self._use_retry = use_retry
+        # Disable learning components for simplicity
+        self._use_cache = False
+        self._use_retry = False
         self._cache = None
         self._retry_engine = None
-        
-        # Initialize learning components if enabled
-        if use_cache:
-            try:
-                from learning import ToolCache
-                self._cache = ToolCache()
-                logger.debug("Tool cache enabled")
-            except Exception as e:
-                logger.warning(f"Failed to initialize tool cache: {e}")
-        
-        if use_retry:
-            try:
-                from learning import RetryEngine
-                self._retry_engine = RetryEngine(self, max_retries=3)
-                logger.debug("Retry engine enabled")
-            except Exception as e:
-                logger.warning(f"Failed to initialize retry engine: {e}")
 
     def register(
         self,
@@ -102,52 +86,27 @@ class ToolRegistry:
         tool = self.tools[name_lower]
         func = tool["func"]
         
-        # Normalize args to dict
+        # Normalize args to dict - simple approach
         normalized_args = {}
-        try:
-            if args is None:
-                normalized_args = {}
-            elif isinstance(args, str):
+        if args is None:
+            normalized_args = {}
+        elif isinstance(args, dict):
+            normalized_args = args
+        elif isinstance(args, str):
+            if args.startswith('{') or args.startswith('['):
                 try:
                     normalized_args = json.loads(args)
-                except json.JSONDecodeError:
-                    return f"Error: Invalid JSON arguments for tool '{name}': {args}"
-            elif isinstance(args, dict):
-                normalized_args = args
+                except:
+                    normalized_args = {}
             else:
-                return f"Error: Tool '{name}' requires a dict of arguments, got {type(args)}"
-        except Exception as e:
-            return f"Error: Failed to process arguments for tool '{name}': {str(e)}"
+                normalized_args = {}
         
-        # Check cache first
-        if self._cache is not None:
-            cached_result = self._cache.get(name_lower, normalized_args)
-            if cached_result is not None:
-                logger.debug(f"Cache hit for tool '{name}'")
-                return cached_result
-        
-        # Execute with retry if enabled
-        if self._retry_engine is not None:
-            retry_result = self._retry_engine.execute_with_retry(name_lower, normalized_args)
-            
-            # Cache successful results
-            if self._cache is not None and retry_result.success:
-                self._cache.set(name_lower, normalized_args, retry_result.final_output, success=True)
-            
-            return retry_result.final_output
-        
-        # Direct execution (fallback)
+        # Direct execution
         try:
             result = func(normalized_args)
-            result_str = str(result) if result is not None else "Tool executed successfully"
-            
-            # Cache successful results
-            if self._cache is not None and not result_str.startswith("Error:"):
-                self._cache.set(name_lower, normalized_args, result_str, success=True)
-            
-            logger.debug(f"Tool '{name}' executed successfully")
+            result_str = str(result) if result is not None else "Done"
+            logger.debug(f"Tool '{name}' executed: {result_str}")
             return result_str
-            
         except Exception as e:
             error_msg = f"Tool '{name}' failed: {str(e)}"
             logger.error(error_msg)
@@ -221,8 +180,12 @@ class ToolRegistry:
 
 def create_default_registry() -> ToolRegistry:
     """Create a registry with built-in basic tools."""
+    import os
+    from pathlib import Path
+    
     registry = ToolRegistry()
     
+    # Time/Date tools
     def get_time(args: dict) -> str:
         from datetime import datetime
         return datetime.now().strftime("%I:%M %p")
@@ -231,8 +194,163 @@ def create_default_registry() -> ToolRegistry:
         from datetime import datetime
         return datetime.now().strftime("%A, %B %d, %Y")
     
+    # File system tools
+    def read_file(args: dict) -> str:
+        """Read content of a file."""
+        filepath = args.get("path", "")
+        if not filepath:
+            return "Error: No file path provided"
+        
+        try:
+            # Security: restrict to allowed directories
+            safe_paths = [str(Path.cwd()), str(Path.home())]
+            abs_path = Path(filepath).resolve()
+            
+            allowed = any(str(abs_path).startswith(sp) for sp in safe_paths)
+            if not allowed:
+                return f"Error: Access denied to {filepath}"
+            
+            if not abs_path.exists():
+                return f"Error: File not found: {filepath}"
+            
+            content = abs_path.read_text(encoding='utf-8', errors='ignore')
+            # Limit output size
+            if len(content) > 5000:
+                content = content[:5000] + "\n... (truncated)"
+            return content
+        except Exception as e:
+            return f"Error reading file: {str(e)}"
+    
+    def write_file(args: dict) -> str:
+        """Write content to a file."""
+        filepath = args.get("path", "")
+        content = args.get("content", "")
+        
+        if not filepath:
+            return "Error: No file path provided"
+        
+        try:
+            abs_path = Path(filepath).resolve()
+            abs_path.parent.mkdir(parents=True, exist_ok=True)
+            abs_path.write_text(content, encoding='utf-8')
+            return f"Success: Written to {filepath}"
+        except Exception as e:
+            return f"Error writing file: {str(e)}"
+    
+    def list_directory(args: dict) -> str:
+        """List files in a directory."""
+        path = args.get("path", ".")
+        
+        try:
+            abs_path = Path(path).resolve()
+            if not abs_path.exists():
+                return f"Error: Directory not found: {path}"
+            
+            items = []
+            for item in abs_path.iterdir():
+                suffix = "/" if item.is_dir() else ""
+                items.append(f"{item.name}{suffix}")
+            
+            return "\n".join(items[:50])  # Limit to 50 items
+        except Exception as e:
+            return f"Error listing directory: {str(e)}"
+    
+    def search_web(args: dict) -> str:
+        """Search the web using Wikipedia API and fallback searches."""
+        query = args.get("query", "")
+        if not query:
+            return "Error: No search query provided"
+        
+        try:
+            import requests
+            from urllib.parse import quote
+            
+            # Try Wikipedia API first (most reliable)
+            wiki_url = f"https://en.wikipedia.org/api/rest_v1/page/summary/{quote(query.replace(' ', '_'))}"
+            headers = {'User-Agent': 'JARVIS/1.0'}
+            resp = requests.get(wiki_url, headers=headers, timeout=10)
+            
+            if resp.status_code == 200:
+                data = resp.json()
+                title = data.get('title', '')
+                extract = data.get('extract', '')
+                if extract:
+                    return f"Wikipedia - {title}:\n{extract[:500]}"
+            
+            # Try DuckDuckGo as fallback
+            url = f"https://html.duckduckgo.com/html/?q={quote(query)}"
+            headers = {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+            }
+            resp = requests.get(url, headers=headers, timeout=15)
+            
+            import re
+            pattern = r'<a class="result__a" href="([^"]+)"[^>]*>([^<]+)</a>'
+            matches = re.findall(pattern, resp.text)
+            
+            if matches:
+                output = []
+                for url, title in matches[:5]:
+                    title = re.sub(r'<[^>]+>', '', title).strip()
+                    output.append(f"- {title}: {url}")
+                return "Search Results:\n" + "\n".join(output)
+            
+            return "No search results found. Please try a more specific query."
+        except Exception as e:
+            return f"Search error: {str(e)}"
+    
+    def get_working_directory(args: dict) -> str:
+        """Get current working directory."""
+        return str(Path.cwd())
+    
+    # Simple in-memory storage for conversation context
+    _memory_store = {}
+    
+    def remember(args: dict) -> str:
+        """Remember something for future reference."""
+        key = args.get("key", "")
+        value = args.get("value", "")
+        if not key or not value:
+            return "Error: Both 'key' and 'value' are required"
+        _memory_store[key] = value
+        return f"Remembered: {key} = {value}"
+    
+    def recall(args: dict) -> str:
+        """Recall something from memory."""
+        key = args.get("key", "")
+        if not key:
+            return "Error: 'key' is required"
+        value = _memory_store.get(key, f"No memory found for: {key}")
+        return value
+    
+    def list_memories(args: dict) -> str:
+        """List all remembered items."""
+        if not _memory_store:
+            return "No memories stored"
+        return "\n".join([f"- {k}: {v}" for k, v in _memory_store.items()])
+    
+    def forget(args: dict) -> str:
+        """Forget a specific memory."""
+        key = args.get("key", "")
+        if not key:
+            return "Error: 'key' is required"
+        if key in _memory_store:
+            del _memory_store[key]
+            return f"Forgotten: {key}"
+        return f"No memory found for: {key}"
+    
+    # Register all tools
     registry.register("get_time", get_time, "Get the current time")
     registry.register("get_date", get_date, "Get the current date")
+    registry.register("read_file", read_file, "Read content from a file")
+    registry.register("write_file", write_file, "Write content to a file")
+    registry.register("list_dir", list_directory, "List files in a directory")
+    registry.register("search_web", search_web, "Search the web for information")
+    registry.register("pwd", get_working_directory, "Get current working directory")
+    registry.register("remember", remember, "Remember something (key, value)")
+    registry.register("recall", recall, "Recall a remembered item by key")
+    registry.register("list_memories", list_memories, "List all remembered items")
+    registry.register("forget", forget, "Forget a specific memory")
     
     return registry
 

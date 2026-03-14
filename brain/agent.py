@@ -45,12 +45,19 @@ class ReActAgent:
             user_input={"role": "user", "content": user_input}
         )
         
-        messages.append({
-            "role": "system",
-            "content": self.tools.get_tool_schema()
-        })
+        # Add tools to the user message (not as a separate system message - 
+        # having 2 system messages causes llama to return empty!)
+        tool_schema = self.tools.get_tool_schema()
+        if tool_schema and tool_schema != "No tools available.":
+            # Append tools info to the last user message
+            for msg in reversed(messages):
+                if msg["role"] == "user":
+                    msg["content"] = f"{msg['content']}\n\n{tool_schema}"
+                    break
         
         full_response = ""
+        tool_calls = 0
+        max_tool_calls = 3  # Limit tool calls to prevent infinite loops
         
         for iteration in range(self.max_iterations):
             logger.debug(f"ReAct iteration {iteration + 1}/{self.max_iterations}")
@@ -72,13 +79,28 @@ class ReActAgent:
                 
                 if action_name is None:
                     logger.info("No action detected, returning final answer")
+                    # Clean up response - remove Thought/Action lines for user
+                    full_response = self._clean_response(content)
+                    break
+                
+                # Check if we've exceeded max tool calls
+                if tool_calls >= max_tool_calls:
+                    logger.warning(f"Max tool calls ({max_tool_calls}) reached, returning current response")
+                    full_response = self._clean_response(content)
                     break
                 
                 logger.info(f"Executing tool: {action_name}")
                 observation = self.tools.execute(action_name, action_args)
+                tool_calls += 1
                 
                 messages.append({"role": "assistant", "content": content})
                 messages.append({"role": "user", "content": f"Observation: {observation}"})
+                
+                # After getting observation, provide final answer without further tool calls
+                logger.info("Tool executed, returning final answer")
+                # Include observation in cleaned response
+                full_response = f"{observation}"
+                break
                 
             except OllamaConnectionError as e:
                 error_msg = f"Connection error: {str(e)}"
@@ -110,12 +132,17 @@ class ReActAgent:
             user_input={"role": "user", "content": user_input}
         )
         
-        messages.append({
-            "role": "system",
-            "content": self.tools.get_tool_schema()
-        })
+        # Add tools to the user message (not as a separate system message)
+        tool_schema = self.tools.get_tool_schema()
+        if tool_schema and tool_schema != "No tools available.":
+            for msg in reversed(messages):
+                if msg["role"] == "user":
+                    msg["content"] = f"{msg['content']}\n\n{tool_schema}"
+                    break
         
         full_response = ""
+        tool_calls = 0
+        max_tool_calls = 3  # Limit tool calls to prevent infinite loops
         
         for iteration in range(self.max_iterations):
             logger.debug(f"ReAct iteration {iteration + 1}/{self.max_iterations}")
@@ -137,13 +164,25 @@ class ReActAgent:
                     yield content, True
                     break
                 
+                # Check if we've exceeded max tool calls
+                if tool_calls >= max_tool_calls:
+                    logger.warning(f"Max tool calls ({max_tool_calls}) reached, returning current response")
+                    yield content, True
+                    break
+                
                 logger.info(f"Executing tool: {action_name}")
                 observation = self.tools.execute(action_name, action_args)
+                tool_calls += 1
                 
                 yield content, False
                 
                 messages.append({"role": "assistant", "content": content})
                 messages.append({"role": "user", "content": f"Observation: {observation}"})
+                
+                # After getting observation, provide final answer
+                logger.info("Tool executed, returning final answer")
+                yield observation, True
+                break
                 
             except OllamaConnectionError as e:
                 error_msg = f"Connection error: {str(e)}"
@@ -158,6 +197,17 @@ class ReActAgent:
         self.prompt_builder.add_message("user", user_input)
         self.prompt_builder.add_message("assistant", full_response)
 
+    def _clean_response(self, response: str) -> str:
+        """Remove Thought/Action lines from response for user-facing output."""
+        import re
+        # Remove Thought: lines
+        cleaned = re.sub(r'^Thought:.*$', '', response, flags=re.MULTILINE)
+        # Remove Action: lines
+        cleaned = re.sub(r'^Action:.*$', '', cleaned, flags=re.MULTILINE)
+        # Clean up extra whitespace
+        cleaned = re.sub(r'\n{3,}', '\n\n', cleaned)
+        return cleaned.strip()
+    
     def reset(self) -> None:
         """Reset the agent's conversation history."""
         self.prompt_builder.clear_history()

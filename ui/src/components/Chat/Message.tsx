@@ -1,5 +1,6 @@
 import { Bot, User } from 'lucide-react'
 import type { ChatMessage } from '../../hooks/useChatWebSocket'
+import { Typewriter } from '@tigerabrodioss/kasumi'
 
 interface MessageProps {
   message: ChatMessage
@@ -34,12 +35,18 @@ export function Message({ message }: MessageProps) {
             : 'bg-slate-700 text-gray-100 rounded-bl-sm'
         }`}
       >
-        <p className="whitespace-pre-wrap break-words leading-relaxed">
-          {message.content}
-          {isStreaming && (
-            <span className="inline-block w-0.5 h-4 ml-0.5 bg-teal-300 animate-pulse" />
-          )}
-        </p>
+        {isStreaming ? (
+          <Typewriter
+            text={message.content}
+            feel="cinematic"
+            blur={{ amount: 8, duration: 300, trailLength: 4 }}
+            className="whitespace-pre-wrap break-words leading-relaxed"
+          />
+        ) : (
+          <p className="whitespace-pre-wrap break-words leading-relaxed">
+            {message.content}
+          </p>
+        )}
         
         {/* Timestamp */}
         <div className={`text-xs mt-1 opacity-60 ${

@@ -88,7 +88,7 @@ class VoicePipeline:
             self._stt = STTEngine(model_size=stt_model, device=stt_device)
         except Exception as e:
             logger.warning(f"Failed to load STT with {stt_device}, falling back to CPU: {e}")
-            self._stt = STTEngine(model_size=stt_model, device="cpu")
+            self._stt = STTEngine(model_size=stt_model, device="cpu", compute_type="float32")
         
         # TTS
         try:
