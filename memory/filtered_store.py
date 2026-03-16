@@ -236,6 +236,9 @@ class FilteredMemory:
         if filter is None:
             filter = MemoryFilter()
         
+        # Compute query relevance scores using lexical matching
+        query_terms = set(query.lower().split())
+        
         results = []
         
         for entry in self._memory_index.values():
@@ -255,13 +258,20 @@ class FilteredMemory:
             if filter.date_to and entry.created_at > filter.date_to:
                 continue
             
-            results.append(entry)
+            # Calculate query relevance score (lexical matching)
+            content_lower = entry.content.lower()
+            match_count = sum(1 for term in query_terms if term in content_lower)
+            query_relevance = match_count / len(query_terms) if query_terms else 0.0
+            
+            # Store entry with relevance score
+            results.append((entry, query_relevance))
         
-        # Sort by importance (higher first)
-        results.sort(key=lambda e: e.importance, reverse=True)
+        # Sort by query relevance first, then by importance
+        # Entries with query terms get priority over importance-only sorting
+        results.sort(key=lambda x: (x[1], x[0].importance), reverse=True)
         
-        # Apply limit
-        return results[:filter.limit]
+        # Extract entries and apply limit
+        return [entry for entry, _ in results[:filter.limit]]
     
     def get_by_project(self, project: str) -> list[MemoryEntry]:
         """

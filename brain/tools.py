@@ -423,7 +423,8 @@ def create_tools_registry() -> ToolRegistry:
         """Execute filesystem operation."""
         action = args.get("action", "list")
         path = args.get("path", ".")
-        return filesystem.execute(action=action, path=path)
+        clean_args = {k: v for k, v in args.items() if k not in ("action", "path")}
+        return filesystem.execute(action=action, path=path, **clean_args)
     
     registry.register(
         "filesystem",
@@ -447,7 +448,8 @@ def create_tools_registry() -> ToolRegistry:
     def execute_calendar(args: dict) -> str:
         """Execute Google Calendar operation."""
         action = args.get("action", "list_events")
-        return google_calendar.execute(action=action, **args)
+        clean_args = {k: v for k, v in args.items() if k != "action"}
+        return google_calendar.execute(action=action, **clean_args)
     
     registry.register(
         "google_calendar",
@@ -459,7 +461,8 @@ def create_tools_registry() -> ToolRegistry:
     def execute_gmail(args: dict) -> str:
         """Execute Google Email operation."""
         action = args.get("action", "list_emails")
-        return google_email.execute(action=action, **args)
+        clean_args = {k: v for k, v in args.items() if k != "action"}
+        return google_email.execute(action=action, **clean_args)
     
     registry.register(
         "google_email",
@@ -471,7 +474,8 @@ def create_tools_registry() -> ToolRegistry:
     def execute_outlook(args: dict) -> str:
         """Execute Microsoft Outlook operation."""
         action = args.get("action", "list_emails")
-        return microsoft_outlook.execute(action=action, **args)
+        clean_args = {k: v for k, v in args.items() if k != "action"}
+        return microsoft_outlook.execute(action=action, **clean_args)
     
     registry.register(
         "outlook",
@@ -483,7 +487,8 @@ def create_tools_registry() -> ToolRegistry:
     def execute_monitor(args: dict) -> str:
         """Execute system monitoring."""
         action = args.get("action", "all")
-        return system_monitor.execute(action=action, **args)
+        clean_args = {k: v for k, v in args.items() if k != "action"}
+        return system_monitor.execute(action=action, **clean_args)
     
     registry.register(
         "system_monitor",

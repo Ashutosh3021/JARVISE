@@ -13,13 +13,14 @@ Provides REST endpoints for memory operations:
 
 from typing import Any
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Depends
 from pydantic import BaseModel
 
 from loguru import logger
 
 from core.config import Config
 from memory.MemoryManager import MemoryManager
+from backend.api.dependencies import verify_api_key
 
 
 router = APIRouter()
@@ -115,7 +116,7 @@ async def get_memory(memory_id: str) -> dict[str, Any]:
 
 
 @router.post("/memory")
-async def create_memory(entry: MemoryEntry) -> dict[str, Any]:
+async def create_memory(entry: MemoryEntry, _: bool = Depends(verify_api_key)) -> dict[str, Any]:
     """
     Create a new memory entry.
     
@@ -144,7 +145,7 @@ async def create_memory(entry: MemoryEntry) -> dict[str, Any]:
 
 
 @router.delete("/memory/{memory_id}")
-async def delete_memory(memory_id: str) -> dict[str, Any]:
+async def delete_memory(memory_id: str, _: bool = Depends(verify_api_key)) -> dict[str, Any]:
     """
     Delete a memory entry.
     
@@ -192,7 +193,7 @@ async def get_memory_file() -> dict[str, Any]:
 
 
 @router.put("/memory.md")
-async def update_memory_file(update: MemoryFileUpdate) -> dict[str, Any]:
+async def update_memory_file(update: MemoryFileUpdate, _: bool = Depends(verify_api_key)) -> dict[str, Any]:
     """
     Update the MEMORY.md file content.
     
@@ -216,7 +217,7 @@ async def update_memory_file(update: MemoryFileUpdate) -> dict[str, Any]:
 
 
 @router.post("/memory/fact")
-async def save_fact(request: FactRequest) -> dict[str, Any]:
+async def save_fact(request: FactRequest, _: bool = Depends(verify_api_key)) -> dict[str, Any]:
     """
     Save an important fact to MEMORY.md.
     
@@ -239,7 +240,7 @@ async def save_fact(request: FactRequest) -> dict[str, Any]:
 
 
 @router.get("/memory/stats")
-async def get_memory_stats() -> dict[str, Any]:
+async def get_memory_stats(_: bool = Depends(verify_api_key)) -> dict[str, Any]:
     """
     Get memory system statistics.
     
@@ -310,7 +311,7 @@ class ClearMemoryRequest(BaseModel):
 
 
 @router.post("/memory/add")
-async def add_memory(request: AddMemoryRequest) -> dict[str, Any]:
+async def add_memory(request: AddMemoryRequest, _: bool = Depends(verify_api_key)) -> dict[str, Any]:
     """
     Add a memory entry with importance filtering.
     
@@ -448,8 +449,8 @@ async def get_recent_memory(limit: int = 10) -> dict[str, Any]:
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.delete("/memory/{entry_id}")
-async def delete_memory_entry(entry_id: str) -> dict[str, Any]:
+@router.delete("/memory/entry/{entry_id}")
+async def delete_memory_entry(entry_id: str, _: bool = Depends(verify_api_key)) -> dict[str, Any]:
     """
     Delete a specific memory entry.
     
@@ -474,7 +475,7 @@ async def delete_memory_entry(entry_id: str) -> dict[str, Any]:
 
 
 @router.post("/memory/clear")
-async def clear_memory(request: ClearMemoryRequest) -> dict[str, Any]:
+async def clear_memory(request: ClearMemoryRequest, _: bool = Depends(verify_api_key)) -> dict[str, Any]:
     """
     Clear memory entries.
     
@@ -513,7 +514,7 @@ async def clear_memory(request: ClearMemoryRequest) -> dict[str, Any]:
 
 
 @router.get("/memory/filtered-stats")
-async def get_filtered_stats() -> dict[str, Any]:
+async def get_filtered_stats(_: bool = Depends(verify_api_key)) -> dict[str, Any]:
     """
     Get filtered memory statistics.
     

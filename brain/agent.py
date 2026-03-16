@@ -96,11 +96,9 @@ class ReActAgent:
                 messages.append({"role": "assistant", "content": content})
                 messages.append({"role": "user", "content": f"Observation: {observation}"})
                 
-                # After getting observation, provide final answer without further tool calls
-                logger.info("Tool executed, returning final answer")
-                # Include observation in cleaned response
-                full_response = f"{observation}"
-                break
+                # Continue loop to let LLM process the observation and formulate response
+                logger.info(f"Tool executed, continuing with observation")
+                continue
                 
             except OllamaConnectionError as e:
                 error_msg = f"Connection error: {str(e)}"
@@ -174,15 +172,12 @@ class ReActAgent:
                 observation = self.tools.execute(action_name, action_args)
                 tool_calls += 1
                 
-                yield content, False
-                
                 messages.append({"role": "assistant", "content": content})
                 messages.append({"role": "user", "content": f"Observation: {observation}"})
                 
-                # After getting observation, provide final answer
-                logger.info("Tool executed, returning final answer")
-                yield observation, True
-                break
+                # Continue loop to let LLM process the observation and formulate response
+                logger.info(f"Tool executed, continuing with observation")
+                continue
                 
             except OllamaConnectionError as e:
                 error_msg = f"Connection error: {str(e)}"

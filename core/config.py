@@ -68,12 +68,22 @@ class Config(BaseSettings):
 
     # UI Configuration
     ui_host: str = Field(
-        default="0.0.0.0",
-        description="UI server host"
+        default="127.0.0.1",
+        description="UI server host (use 0.0.0.0 for remote access, requires auth)"
     )
     ui_port: int = Field(
         default=8000,
         description="UI server port"
+    )
+    
+    # API Authentication
+    api_key: str = Field(
+        default="",
+        description="API key for authenticated endpoints (required for remote access)"
+    )
+    allow_remote_access: bool = Field(
+        default=False,
+        description="Allow remote (non-loopback) access to destructive endpoints"
     )
 
     # Logging Configuration

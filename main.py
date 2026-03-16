@@ -8,6 +8,7 @@ import signal
 import argparse
 import threading
 import time
+import socket
 from pathlib import Path
 
 # Add project root to path
@@ -23,7 +24,7 @@ from core.config import load_config
 # Import brain
 from brain.agent import ReActAgent
 from brain.router import CommandRouter
-from brain.tools import create_default_registry
+from brain.tools import create_tools_registry
 
 # Import memory
 from memory import MemoryManager
@@ -79,17 +80,50 @@ def setup_logging(verbose: bool = False):
 def start_ui_server(config):
     """Start the FastAPI backend server in a thread."""
     import uvicorn
+    import socket
     
     app = create_app()
     
+    # Find an available port starting from ui_port
+    port = config.ui_port
+    max_attempts = 10
+    
+    while max_attempts > 0:
+        if _is_port_available(config.ui_host, port):
+            break
+        port += 1
+        max_attempts -= 1
+    
+    if max_attempts == 0:
+        logger.warning(f"Could not find available port near {config.ui_port}, using default 8000")
+        port = 8000
+    
     config_dict = {
         "host": config.ui_host,
-        "port": config.ui_port,
+        "port": port,
         "app": app,
         "log_level": "info",
     }
     
-    uvicorn.run(**config_dict)
+    try:
+        uvicorn.run(**config_dict)
+    except OSError as e:
+        if "Address already in use" in str(e):
+            logger.error(f"Port {port} is in use. Please free the port or run with a different port.")
+        else:
+            logger.error(f"UI server error: {e}")
+
+
+def _is_port_available(host: str, port: int) -> bool:
+    """Check if a port is available."""
+    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    sock.settimeout(1)
+    try:
+        sock.connect((host, port))
+        sock.close()
+        return False  # Port is in use
+    except (socket.timeout, ConnectionRefusedError, OSError):
+        return True  # Port is available
 
 
 def signal_handler(sig, frame):
@@ -155,7 +189,7 @@ def run_jarvis(args):
     
     # 4. Initialize agent
     logger.info("Initializing agent...")
-    tool_registry = create_default_registry()
+    tool_registry = create_tools_registry()
     agent = ReActAgent(tool_registry=tool_registry)
     logger.info("Agent ready")
     

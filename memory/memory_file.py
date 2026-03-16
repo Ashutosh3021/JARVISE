@@ -207,8 +207,8 @@ class MemoryFileController:
         # Get current preferences
         current_content = self.get_section("Preferences")
         
-        # Check if key exists
-        pattern = re.compile(rf"^\s*-\s*\*{key}\*:\s*.+$", re.MULTILINE)
+        # Check if key exists - match format: - **Key:** value
+        pattern = re.compile(rf"^\s*-\s*\*{re.escape(key)}\*\*:\s*.+$", re.MULTILINE)
         match = pattern.search(current_content)
         
         if match:
@@ -234,8 +234,8 @@ class MemoryFileController:
         """
         current_content = self.get_section("Preferences")
         
-        # Find the key
-        pattern = re.compile(rf"^\s*-\s*\*{re.escape(key)}\*:\s*(.+)$", re.MULTILINE)
+        # Find the key - match format: - **Key:** value
+        pattern = re.compile(rf"^\s*-\s*\*{re.escape(key)}\*\*:\s*(.+)$", re.MULTILINE)
         match = pattern.search(current_content)
         
         if match:

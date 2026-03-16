@@ -10,9 +10,11 @@ Provides REST endpoints for learning features:
 
 from typing import Any
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Depends
 from pydantic import BaseModel
 from loguru import logger
+
+from backend.api.dependencies import verify_api_key
 
 router = APIRouter()
 
@@ -49,7 +51,7 @@ def set_command_router(router):
 
 
 @router.post("/learn/correct")
-async def learn_correction(request: CorrectionRequest) -> dict[str, Any]:
+async def learn_correction(request: CorrectionRequest, _: bool = Depends(verify_api_key)) -> dict[str, Any]:
     """
     Learn from a user correction.
     
@@ -78,7 +80,7 @@ async def learn_correction(request: CorrectionRequest) -> dict[str, Any]:
 
 
 @router.get("/learn/preferences")
-async def get_preferences() -> dict[str, Any]:
+async def get_preferences(_: bool = Depends(verify_api_key)) -> dict[str, Any]:
     """
     Get all stored preferences.
     
@@ -116,7 +118,7 @@ async def get_preferences() -> dict[str, Any]:
 
 
 @router.post("/learn/forget")
-async def forget_preference(request: ForgetRequest) -> dict[str, Any]:
+async def forget_preference(request: ForgetRequest, _: bool = Depends(verify_api_key)) -> dict[str, Any]:
     """
     Forget a learned preference.
     
@@ -139,7 +141,7 @@ async def forget_preference(request: ForgetRequest) -> dict[str, Any]:
 
 
 @router.get("/learn/stats")
-async def get_learning_stats() -> dict[str, Any]:
+async def get_learning_stats(_: bool = Depends(verify_api_key)) -> dict[str, Any]:
     """
     Get learning system statistics.
     
@@ -170,7 +172,7 @@ async def get_learning_stats() -> dict[str, Any]:
 
 
 @router.post("/learn/cache/clear")
-async def clear_cache(tool_name: str | None = None) -> dict[str, Any]:
+async def clear_cache(tool_name: str | None = None, _: bool = Depends(verify_api_key)) -> dict[str, Any]:
     """
     Clear tool cache.
     

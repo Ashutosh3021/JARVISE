@@ -59,25 +59,56 @@ export function useChatWebSocket(url: string): UseChatWebSocketReturn {
       try {
         const data = JSON.parse(event.data)
 
-        if (data.type === 'chat.stream' || data.type === 'token') {
-          // Token streaming - append to last assistant message
+        // Handle status events (not actual tokens)
+        if (data.type === 'chat.stream' && data.status) {
+          if (data.status === 'processing' || data.status === 'thinking') {
+            setIsThinking(true)
+          }
+          // Don't create assistant message for status events - they have no content
+          return
+        }
+
+        // Handle error events
+        if (data.type === 'error') {
           setMessages(prev => {
-            const last = prev[prev.length - 1]
-            if (last?.role === 'assistant' && last.isStreaming) {
-              return [
-                ...prev.slice(0, -1),
-                { ...last, content: last.content + (data.content || data.token || '') }
-              ]
-            }
-            // Create new assistant message if none exists
+            // Create error message
             return [...prev, {
-              id: `assistant_${Date.now()}_streaming`,
+              id: `error_${Date.now()}`,
               role: 'assistant',
-              content: data.content || data.token || '',
+              content: data.message || 'An error occurred',
               timestamp: new Date(),
-              isStreaming: true
+              isStreaming: false
             }]
           })
+          setIsStreaming(false)
+          setIsThinking(false)
+          return
+        }
+
+        // Handle actual token events
+        if (data.type === 'token') {
+          const tokenContent = data.content || data.token || ''
+          
+          // Only create message if there's actual content
+          if (tokenContent) {
+            setMessages(prev => {
+              const last = prev[prev.length - 1]
+              if (last?.role === 'assistant' && last.isStreaming) {
+                return [
+                  ...prev.slice(0, -1),
+                  { ...last, content: last.content + tokenContent }
+                ]
+              }
+              // Create new assistant message if none exists
+              return [...prev, {
+                id: `assistant_${Date.now()}_streaming`,
+                role: 'assistant',
+                content: tokenContent,
+                timestamp: new Date(),
+                isStreaming: true
+              }]
+            })
+          }
           setIsStreaming(true)
           setIsThinking(false)
         } else if (data.type === 'done' || data.type === 'chat.done') {

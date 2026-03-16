@@ -148,12 +148,12 @@ class CommandRouter:
     def _load_builtin_commands(self) -> None:
         """Load built-in direct command patterns."""
         builtin_patterns = {
-            # "open *" patterns
+            # "open *" patterns - use filesystem tool
             "open *": ("filesystem", {"action": "open", "path": "*"}),
             "open chrome": ("browser", {"action": "navigate", "url": "https://chrome.google.com"}),
             "open google chrome": ("browser", {"action": "navigate", "url": "https://chrome.google.com"}),
-            "open vscode": ("browser", {"action": "vscode", "url": "vscode"}),
-            "open code": ("browser", {"action": "vscode", "url": "vscode"}),
+            "open vscode": ("filesystem", {"action": "open", "path": "vscode"}),
+            "open code": ("filesystem", {"action": "open", "path": "vscode"}),
             "open notepad": ("filesystem", {"action": "open", "path": "notepad"}),
             "open calculator": ("filesystem", {"action": "open", "path": "calculator"}),
             "open terminal": ("filesystem", {"action": "open", "path": "cmd"}),
@@ -172,13 +172,7 @@ class CommandRouter:
             "search *": ("web_search", {"query": "*"}),
             "google *": ("web_search", {"query": "*"}),
             
-            # Project commands
-            "run tests": ("detect_project", {"action": "test"}),
-            "run test": ("detect_project", {"action": "test"}),
-            "test": ("detect_project", {"action": "test"}),
-            "run *": ("detect_project", {"action": "run", "target": "*"}),
-            
-            # System commands
+            # System commands - use system_monitor tool
             "list files": ("filesystem", {"action": "list"}),
             "list directory": ("filesystem", {"action": "list"}),
             "show files": ("filesystem", {"action": "list"}),
@@ -187,17 +181,8 @@ class CommandRouter:
             "cpu usage": ("system_monitor", {"action": "cpu"}),
             "memory usage": ("system_monitor", {"action": "memory"}),
             
-            # Shutdown/restart (these need confirmation)
-            "shutdown": ("system", {"action": "shutdown"}),
-            "restart": ("system", {"action": "restart"}),
-            "sleep": ("system", {"action": "sleep"}),
-            "hibernate": ("system", {"action": "hibernate"}),
-            
-            # Quick actions
-            "volume up": ("system", {"action": "volume_up"}),
-            "volume down": ("system", {"action": "volume_down"}),
-            "mute": ("system", {"action": "mute"}),
-            "screenshot": ("system", {"action": "screenshot"}),
+            # Screenshot - use filesystem tool with appropriate action
+            "screenshot": ("filesystem", {"action": "screenshot"}),
         }
         
         for pattern, (tool, args) in builtin_patterns.items():
@@ -616,7 +601,7 @@ class CommandRouter:
             from brain.chains import TaskChain
             
             chain = TaskChain(
-                agent=self.tool_registry.llm if self.tool_registry else None,
+                agent=None,
                 tool_registry=self.tool_registry,
             )
             

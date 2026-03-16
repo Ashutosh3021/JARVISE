@@ -39,6 +39,7 @@ env/
 data/chromadb/
 data/*.db
 data/*.log
+data/tokens/
 models/
 *.bin
 *.onnx
@@ -54,8 +55,9 @@ htmlcov/
 
 ui\node_modules
 *node_modules
+ui\dist
+dist
 .planning
-creds/Google.json
-package-lock.json
-package.json
+creds\Google.json
+ui\package-lock.json
 jarvis.log

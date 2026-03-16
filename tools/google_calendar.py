@@ -45,7 +45,16 @@ class GoogleCalendarTool(BaseTool):
         """
         super().__init__(name="google_calendar")
         self.client_secrets_path = client_secrets_path
-        self.token_manager = token_manager or TokenManager()
+        if token_manager is not None:
+            self.token_manager = token_manager
+        else:
+            # Try to create TokenManager, gracefully handle missing env var
+            try:
+                self.token_manager = TokenManager()
+            except ValueError as e:
+                from loguru import logger
+                logger.warning(f"TokenManager unavailable: {e}. Calendar operations requiring token persistence will fail.")
+                self.token_manager = None
         self._oauth = GoogleOAuth(client_secrets_path)
         self._service = None
     
@@ -68,7 +77,19 @@ class GoogleCalendarTool(BaseTool):
             
         Returns:
             Valid OAuth2 credentials
+            
+        Raises:
+            ToolError: If token manager is not available
         """
+        # Guard against missing token manager
+        if self.token_manager is None:
+            raise ToolError(
+                "GoogleCalendarTool",
+                "TokenManager not available",
+                "Set the JARVIS_TOKEN_KEY environment variable to enable token persistence. "
+                "Generate a key with: python -c \"from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())\""
+            )
+        
         if force_reauth:
             self.token_manager.delete_credentials(self.PROVIDER)
             self.logger.info("Forced re-authentication")

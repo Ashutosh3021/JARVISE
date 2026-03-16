@@ -288,6 +288,18 @@ Example response format:
                 final_output=f"Error: Chain exceeds maximum of {self.MAX_STEPS} steps",
             )
         
+        # Validate that each action exists in the tool registry
+        if hasattr(self.tool_registry, 'tools'):
+            for step in chain_steps:
+                if step.action not in self.tool_registry.tools:
+                    return ChainResult(
+                        chain_id=chain_id,
+                        steps=chain_steps,
+                        status=ChainStatus.FAILED,
+                        total_duration_ms=0,
+                        final_output=f"Error: Tool '{step.action}' not found in registry. Available: {list(self.tool_registry.tools.keys())}",
+                    )
+        
         # Use callback
         callback = progress_callback or self.progress_callback
         self._reset_interrupt()
@@ -315,11 +327,19 @@ Example response format:
             step_start = time.perf_counter()
             
             try:
-                # Execute the step
+                # Execute the step - pass full step data as args
                 if hasattr(self.tool_registry, 'execute'):
-                    # Pass previous output as input if not provided
-                    input_to_use = step.input if step.input else previous_output
-                    result = self.tool_registry.execute(step.action, {"input": input_to_use})
+                    # Build args from step - include all step attributes
+                    step_args = {}
+                    if step.input:
+                        step_args["input"] = step.input
+                    # Add any additional args from the step dict if available
+                    if isinstance(steps[0], dict) and i < len(steps):
+                        for k, v in steps[i].items():
+                            if k not in ("action", "input"):
+                                step_args[k] = v
+                    
+                    result = self.tool_registry.execute(step.action, step_args)
                     step.output = str(result)
                 else:
                     step.output = f"Tool registry not available"

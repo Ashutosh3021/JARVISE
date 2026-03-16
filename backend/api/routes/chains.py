@@ -13,11 +13,12 @@ Provides REST endpoints for chain execution and management:
 import uuid
 from typing import Any
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Depends
 from pydantic import BaseModel
 from loguru import logger
 
 from brain.chains import TaskChain, ChainStatus
+from backend.api.dependencies import verify_api_key
 
 router = APIRouter()
 
@@ -31,10 +32,11 @@ def get_chain_instance() -> TaskChain:
     global _chain_instance
     if _chain_instance is None:
         from brain.agent import ReActAgent
-        from brain.tools import ToolRegistry
+        from brain.tools import create_tools_registry
+        tool_registry = create_tools_registry()
         _chain_instance = TaskChain(
-            agent=ReActAgent(),
-            tool_registry=ToolRegistry(),
+            agent=None,
+            tool_registry=tool_registry,
         )
     return _chain_instance
 
@@ -65,7 +67,7 @@ def chain_to_dict(chain) -> dict[str, Any]:
 
 
 @router.post("/chains/execute")
-async def execute_chain(request: ChainExecuteRequest) -> dict[str, Any]:
+async def execute_chain(request: ChainExecuteRequest, _: bool = Depends(verify_api_key)) -> dict[str, Any]:
     """
     Execute a task chain.
     
@@ -128,7 +130,7 @@ async def get_chain_status(chain_id: str) -> dict[str, Any]:
 
 
 @router.post("/chains/{chain_id}/interrupt")
-async def interrupt_chain(chain_id: str) -> dict[str, Any]:
+async def interrupt_chain(chain_id: str, _: bool = Depends(verify_api_key)) -> dict[str, Any]:
     """Interrupt a running chain."""
     chain = get_chain_instance()
     
@@ -146,7 +148,7 @@ async def interrupt_chain(chain_id: str) -> dict[str, Any]:
 
 
 @router.get("/chains/templates")
-async def get_templates() -> dict[str, Any]:
+async def get_templates(_: bool = Depends(verify_api_key)) -> dict[str, Any]:
     """Get all available chain templates."""
     chain = get_chain_instance()
     templates = chain.list_templates()
@@ -154,7 +156,7 @@ async def get_templates() -> dict[str, Any]:
 
 
 @router.post("/chains/templates")
-async def create_template(request: ChainTemplateRequest) -> dict[str, Any]:
+async def create_template(request: ChainTemplateRequest, _: bool = Depends(verify_api_key)) -> dict[str, Any]:
     """Create a custom chain template."""
     chain = get_chain_instance()
     
@@ -170,7 +172,7 @@ async def create_template(request: ChainTemplateRequest) -> dict[str, Any]:
 
 
 @router.get("/chains/history")
-async def get_history() -> dict[str, Any]:
+async def get_history(_: bool = Depends(verify_api_key)) -> dict[str, Any]:
     """Get chain execution history."""
     chain = get_chain_instance()
     history = chain.get_history()

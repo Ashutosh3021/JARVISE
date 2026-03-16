@@ -386,7 +386,7 @@ class FilesystemTool(BaseTool):
         """Execute filesystem operation.
         
         Args:
-            action: Action to perform (read, write, delete, list)
+            action: Action to perform (read, write, delete, list, open, screenshot)
             path: File/directory path
             **kwargs: Additional arguments
             
@@ -399,6 +399,8 @@ class FilesystemTool(BaseTool):
             "delete": lambda: self.delete_file(path, kwargs.get("ask_confirmation", True)),
             "list": lambda: self.list_directory(path),
             "create_directory": lambda: self.create_directory(path, kwargs.get("ask_confirmation", True)),
+            "open": lambda: self._open_file_or_app(path),
+            "screenshot": lambda: self._take_screenshot(),
         }
         
         if action not in actions:
@@ -409,6 +411,118 @@ class FilesystemTool(BaseTool):
             )
         
         return execute_with_error_handling(self.name, actions[action])
+    
+    def _open_file_or_app(self, target: str) -> str:
+        """Open a file or application.
+        
+        Args:
+            target: File path or application name
+            
+        Returns:
+            Success message
+        """
+        import subprocess
+        import sys
+        
+        # Handle common application names
+        app_aliases = {
+            "notepad": "notepad.exe",
+            "calculator": "calc.exe",
+            "cmd": "cmd.exe",
+            "powershell": "powershell.exe",
+            "chrome": "chrome",
+            "vscode": "code",
+        }
+        
+        # Resolve alias
+        resolved = app_aliases.get(target.lower(), target)
+        
+        try:
+            if sys.platform == "win32":
+                # Windows: use start command
+                subprocess.Popen(
+                    ["start", "", resolved],
+                    shell=True,
+                    stdout=subprocess.DEVNULL,
+                    stderr=subprocess.DEVNULL
+                )
+            else:
+                # Unix-like: use xdg-open or open
+                subprocess.Popen(
+                    ["xdg-open", resolved],
+                    stdout=subprocess.DEVNULL,
+                    stderr=subprocess.DEVNULL
+                )
+            return f"Opened: {target}"
+        except Exception as e:
+            raise ToolError(
+                "FilesystemTool",
+                f"Failed to open {target}: {e}",
+                "Check if the application exists"
+            )
+    
+    def _take_screenshot(self) -> str:
+        """Take a screenshot and save to file.
+        
+        Returns:
+            Full absolute path to saved screenshot
+        """
+        import subprocess
+        import sys
+        from pathlib import Path
+        from datetime import datetime
+        
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        filename = f"screenshot_{timestamp}.png"
+        
+        # Determine save directory - use Pictures folder or data directory
+        if sys.platform == "win32":
+            save_dir = Path.home() / "Pictures"
+        else:
+            save_dir = Path.home() / "Pictures"
+            if not save_dir.exists():
+                save_dir = Path.home() / "screenshots"
+        
+        # Fallback to data directory if Pictures doesn't exist
+        if not save_dir.exists():
+            save_dir = Path(__file__).parent.parent / "data"
+        
+        save_dir.mkdir(parents=True, exist_ok=True)
+        full_path = save_dir / filename
+        
+        try:
+            if sys.platform == "win32":
+                # Use PowerShell to take screenshot on Windows
+                # This is a basic implementation - for production, consider pyautogui or PIL
+                script = f'''
+Add-Type -AssemblyName System.Windows.Forms
+Add-Type -AssemblyName System.Drawing
+$screen = [System.Windows.Forms.Screen]::PrimaryScreen.Bitmap
+$screen.Save("{full_path}", [System.Drawing.Imaging.ImageFormat]::Png)
+$screen.Dispose()
+'''
+                subprocess.run(
+                    ["powershell", "-Command", script],
+                    stdout=subprocess.DEVNULL,
+                    stderr=subprocess.DEVNULL,
+                    check=True
+                )
+                return f"Screenshot saved: {full_path.resolve()}"
+            else:
+                # Unix-like: use scrot or gnome-screenshot
+                subprocess.run(
+                    ["scrot", str(full_path)],
+                    stdout=subprocess.DEVNULL,
+                    stderr=subprocess.DEVNULL,
+                    check=True
+                )
+                return f"Screenshot saved: {full_path.resolve()}"
+        except Exception as e:
+            raise ToolError(
+                "FilesystemTool",
+                f"Failed to take screenshot: {e}",
+                "Ensure you have screenshot permissions"
+            )
     
     def __repr__(self) -> str:
         return f"<FilesystemTool home={self.home}>"

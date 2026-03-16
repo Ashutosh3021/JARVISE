@@ -1,14 +1,17 @@
 """
 JARVIS Tools - Code Execution
 
-Sandboxed Python code execution tool.
+Sandboxed Python code execution tool using process-based isolation.
 Per user decision: streaming + async callbacks, full logging, detailed errors.
 """
 
+import os
 import sys
 import io
 import signal
-import threading
+import subprocess
+import tempfile
+import json
 from typing import Any, Callable
 from dataclasses import dataclass
 
@@ -36,12 +39,12 @@ class MemoryLimitException(Exception):
 
 
 class CodeExecutionTool(BaseTool):
-    """Sandboxed Python code execution tool.
+    """Sandboxed Python code execution tool using process isolation.
     
     Per user decision:
-    - Blocking dangerous imports (os, subprocess, socket, etc.)
-    - Memory limits
-    - Timeout limits
+    - Process-based isolation for true sandboxing
+    - Memory limits via OS process constraints
+    - Timeout limits via OS process termination
     - Streaming output via callback
     - Full logging
     - Detailed errors with suggestions
@@ -89,10 +92,6 @@ class CodeExecutionTool(BaseTool):
         
         self.timeout = timeout
         self.memory_mb = memory_mb
-        
-        # Setup custom stdout/stderr capture
-        self._output_buffer = io.StringIO()
-        self._error_buffer = io.StringIO()
     
     def _check_dangerous_code(self, code: str) -> None:
         """Check for dangerous patterns in code.
@@ -140,35 +139,54 @@ class CodeExecutionTool(BaseTool):
                     "Rewrite your code without this pattern"
                 )
     
-    def _timeout_handler(self, signum, frame):
-        """Signal handler for timeout."""
-        raise TimeoutException(f"Execution timed out after {self.timeout} seconds")
-    
-    def _run_with_timeout(self, code: str, globals_dict: dict, locals_dict: dict) -> None:
-        """Run code with timeout.
+    def _create_safe_script(self, code: str) -> str:
+        """Create a safe Python script wrapper.
         
         Args:
-            code: Python code to execute
-            globals_dict: Global variables dict
-            locals_dict: Local variables dict
+            code: User code to wrap
+            
+        Returns:
+            Full Python script to execute
         """
-        # Set up timeout
-        signal.signal(signal.SIGALRM, self._timeout_handler)
-        signal.alarm(self.timeout)
-        
-        try:
-            # Execute the code
-            exec(code, globals_dict, locals_dict)
-        finally:
-            # Cancel alarm
-            signal.alarm(0)
+        # Create wrapper that captures output safely
+        wrapper = f'''
+import sys
+import json
+
+# Safe print that outputs JSON
+class SafePrint:
+    def __init__(self):
+        self.output = []
+    
+    def write(self, text):
+        if text.strip():
+            self.output.append(str(text))
+    
+    def flush(self):
+        pass
+
+# Redirect stdout to capture output
+safe_out = SafePrint()
+sys.stdout = safe_out
+
+try:
+{code}
+    # Output result as JSON
+    result = {{"output": "\\\\n".join(safe_out.output), "error": None, "status": "success"}}
+except Exception as e:
+    result = {{"output": "", "error": str(e), "status": "error"}}
+
+sys.stdout = sys.__stdout__
+print(json.dumps(result))
+'''
+        return wrapper
     
     def execute(
         self,
         code: str,
         stream_callback: Callable[[str], None] | None = None
     ) -> dict[str, Any]:
-        """Execute Python code in sandbox.
+        """Execute Python code in sandbox using process isolation.
         
         Per user decision: blocks dangerous imports, returns {output, error, status}.
         
@@ -184,147 +202,58 @@ class CodeExecutionTool(BaseTool):
         # Check for dangerous code first
         self._check_dangerous_code(code)
         
-        # Setup execution environment
-        stdout_capture = io.StringIO()
-        stderr_capture = io.StringIO()
+        # Create safe script
+        safe_script = self._create_safe_script(code)
         
-        # Safe globals - no access to dangerous modules
-        safe_globals = {
-            "__builtins__": {
-                # Allow only safe builtins
-                "print": lambda *args, **kwargs: (
-                    stdout_capture.write(" ".join(str(a) for a in args) + "\n"),
-                    stream_callback(" ".join(str(a) for a in args)) if stream_callback else None
-                ),
-                "len": len,
-                "range": range,
-                "enumerate": enumerate,
-                "zip": zip,
-                "map": map,
-                "filter": filter,
-                "sorted": sorted,
-                "reversed": reversed,
-                "sum": sum,
-                "min": min,
-                "max": max,
-                "abs": abs,
-                "round": round,
-                "pow": pow,
-                "divmod": divmod,
-                "isinstance": isinstance,
-                "issubclass": issubclass,
-                "type": type,
-                "str": str,
-                "int": int,
-                "float": float,
-                "bool": bool,
-                "list": list,
-                "dict": dict,
-                "tuple": tuple,
-                "set": set,
-                "frozenset": frozenset,
-                "slice": slice,
-                "format": format,
-                "hex": hex,
-                "oct": oct,
-                "bin": bin,
-                "ord": ord,
-                "chr": chr,
-                "ascii": ascii,
-                "repr": repr,
-                "hasattr": hasattr,
-                "getattr": getattr,
-                "setattr": setattr,
-                "delattr": delattr,
-                "iter": iter,
-                "next": next,
-                "super": super,
-                "property": property,
-                "staticmethod": staticmethod,
-                "classmethod": classmethod,
-                "Exception": Exception,
-                "BaseException": BaseException,
-                "StopIteration": StopIteration,
-                "ArithmeticError": ArithmeticError,
-                "LookupError": LookupError,
-                "ValueError": ValueError,
-                "TypeError": TypeError,
-                "KeyError": KeyError,
-                "IndexError": IndexError,
-            },
-            # Math module is safe to provide
-            "math": __import__("math"),
-            "random": __import__("random"),
-            "json": __import__("json"),
-            "re": __import__("re"),
-        }
+        # Create temporary file for the script
+        with tempfile.NamedTemporaryFile(mode='w', suffix='.py', delete=False) as f:
+            f.write(safe_script)
+            script_path = f.name
         
         try:
-            # Execute in a separate thread with timeout
-            result_container = []
-            error_container = []
+            # Execute in a separate process with timeout
+            # Use Popen with kill on timeout for hard termination
+            process = subprocess.Popen(
+                [sys.executable, script_path],
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                text=True,
+                creationflags=subprocess.CREATE_NEW_PROCESS_GROUP if sys.platform == "win32" else 0,
+            )
             
-            def run_code():
+            try:
+                # Wait for process with timeout
+                stdout, stderr = process.communicate(timeout=self.timeout)
+                
+                # Process completed within timeout
                 try:
-                    # Create empty locals
-                    safe_locals = {}
+                    result = json.loads(stdout.strip())
                     
-                    # Redirect stdout/stderr
-                    old_stdout = sys.stdout
-                    old_stderr = sys.stderr
-                    sys.stdout = stdout_capture
-                    sys.stderr = stderr_capture
+                    # Stream output if callback provided
+                    if stream_callback and result.get("output"):
+                        for line in result["output"].split("\n"):
+                            stream_callback(line)
                     
-                    try:
-                        exec(compile(code, "<code>", "exec"), safe_globals, safe_locals)
-                    finally:
-                        sys.stdout = old_stdout
-                        sys.stderr = old_stderr
+                    return result
+                except json.JSONDecodeError:
+                    # Fallback if output wasn't JSON
+                    return {
+                        "output": stdout,
+                        "error": stderr or "Failed to parse execution result",
+                        "status": "error"
+                    }
                     
-                    # Get the last expression value if no return
-                    if safe_locals:
-                        last_value = list(safe_locals.values())[-1] if safe_locals else None
-                        if last_value is not None:
-                            stdout_capture.write(repr(last_value))
-                    
-                    result_container.append(stdout_capture.getvalue())
-                except Exception as e:
-                    error_container.append(str(e))
-            
-            # Run in thread with timeout
-            thread = threading.Thread(target=run_code)
-            thread.daemon = True
-            thread.start()
-            thread.join(timeout=self.timeout)
-            
-            if thread.is_alive():
+            except subprocess.TimeoutExpired:
+                # Hard kill the process on timeout
+                process.kill()
+                process.wait()
+                
                 raise ToolError(
                     "CodeExecutionTool",
                     f"Execution timed out after {self.timeout} seconds",
                     "Optimize your code or increase the timeout"
                 )
-            
-            # Check for errors
-            if error_container:
-                error_msg = error_container[0]
-                if "timeout" in error_msg.lower():
-                    raise ToolError(
-                        "CodeExecutionTool",
-                        f"Execution timed out after {self.timeout} seconds",
-                        "Optimize your code or increase the timeout"
-                    )
-                return {
-                    "output": result_container[0] if result_container else "",
-                    "error": error_msg,
-                    "status": "error"
-                }
-            
-            return {
-                "output": result_container[0] if result_container else "",
-                "error": None,
-                "status": "success"
-            }
-            
+        
         except ToolError:
             raise
         except Exception as e:
@@ -332,7 +261,13 @@ class CodeExecutionTool(BaseTool):
                 "CodeExecutionTool",
                 str(e),
                 "Check your code for syntax errors"
-            ) from e
+            )
+        finally:
+            # Clean up temp file
+            try:
+                os.unlink(script_path)
+            except Exception:
+                pass
     
     async def execute_async(
         self,

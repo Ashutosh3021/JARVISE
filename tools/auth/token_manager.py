@@ -48,17 +48,24 @@ class TokenManager:
         
         # Setup encryption key
         if encryption_key is None:
-            key_file = self.token_dir / ".key"
-            if key_file.exists():
-                self.encryption_key = key_file.read_bytes()
+            # Try to get key from environment variable (secure)
+            env_key = os.environ.get("JARVIS_TOKEN_KEY")
+            if env_key:
+                self.encryption_key = env_key.encode() if isinstance(env_key, str) else env_key
             else:
-                self.encryption_key = Fernet.generate_key()
-                key_file.write_bytes(self.encryption_key)
-                logger.info(f"Generated new encryption key at {key_file}")
+                # Require secure runtime key provisioning - do NOT auto-generate or load from file
+                raise ValueError(
+                    "Encryption key required. Set JARVIS_TOKEN_KEY environment variable "
+                    "or pass encryption_key parameter. Do not use file-based keys in production."
+                )
         else:
             self.encryption_key = encryption_key
         
-        self.cipher = Fernet(self.encryption_key)
+        # Validate key format
+        try:
+            self.cipher = Fernet(self.encryption_key)
+        except Exception as e:
+            raise ValueError(f"Invalid encryption key: {e}")
         self.logger = logger.bind(component="TokenManager")
     
     def save_credentials(self, provider: str, credentials: Credentials) -> None:
