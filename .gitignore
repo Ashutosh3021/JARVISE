@@ -61,3 +61,6 @@ dist
 creds\Google.json
 ui\package-lock.json
 jarvis.log
+package-lock.json
+package.json
+Google.json
