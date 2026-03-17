@@ -18,8 +18,12 @@ import {
   WifiOff
 } from 'lucide-react'
 
+// Page type definition
+type Page = 'chat' | 'memory' | 'system' | 'voice' | 'settings'
+
 function App() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
+  const [activePage, setActivePage] = useState<Page>('chat')
   const { theme, toggleTheme } = useTheme()
   
   // Connect to WebSocket for chat
@@ -31,12 +35,12 @@ function App() {
     connectionStatus 
   } = useChatWebSocket('ws://localhost:8000/ws/chat')
 
-  const navItems = [
-    { icon: MessageSquare, label: 'Chat', active: true },
-    { icon: Database, label: 'Memory', active: false },
-    { icon: Cpu, label: 'System', active: false },
-    { icon: Headphones, label: 'Voice', active: false },
-    { icon: Settings, label: 'Settings', active: false },
+  const navItems: { icon: typeof MessageSquare; label: string; page: Page }[] = [
+    { icon: MessageSquare, label: 'Chat', page: 'chat' },
+    { icon: Database, label: 'Memory', page: 'memory' },
+    { icon: Cpu, label: 'System', page: 'system' },
+    { icon: Headphones, label: 'Voice', page: 'voice' },
+    { icon: Settings, label: 'Settings', page: 'settings' },
   ]
 
   return (
@@ -76,8 +80,9 @@ function App() {
             {navItems.map((item) => (
               <button
                 key={item.label}
+                onClick={() => setActivePage(item.page)}
                 className={`w-full flex items-center gap-3 px-4 py-3 transition-colors ${
-                  item.active 
+                  activePage === item.page
                     ? 'text-teal-500 bg-teal-500/10 border-r-2 border-teal-500' 
                     : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-slate-dark-active'
                 }`}
@@ -126,23 +131,90 @@ function App() {
             )}
           </div>
           
-          {/* Chat window */}
-          <ChatWindow 
-            messages={messages}
-            isStreaming={isStreaming}
-            isThinking={isThinking}
-          />
-          
-          {/* Input toolbar */}
-          <InputToolbar 
-            onSendMessage={sendMessage}
-            disabled={connectionStatus === 'connecting'}
-          />
+          {/* Page Content */}
+          {activePage === 'chat' && (
+            <>
+              <ChatWindow 
+                messages={messages}
+                isStreaming={isStreaming}
+                isThinking={isThinking}
+              />
+              <InputToolbar 
+                onSendMessage={sendMessage}
+                disabled={connectionStatus === 'connecting'}
+              />
+            </>
+          )}
+
+          {activePage === 'memory' && (
+            <MemoryPage />
+          )}
+
+          {activePage === 'system' && (
+            <SystemPage />
+          )}
+
+          {activePage === 'voice' && (
+            <VoicePage />
+          )}
+
+          {activePage === 'settings' && (
+            <SettingsPage />
+          )}
         </main>
       </div>
 
       {/* Status bar */}
       <StatusBar />
+    </div>
+  )
+}
+
+// Placeholder page components
+function MemoryPage() {
+  return (
+    <div className="flex-1 flex items-center justify-center text-gray-500">
+      <div className="text-center">
+        <Database className="w-16 h-16 mx-auto mb-4 text-teal-500" />
+        <h2 className="text-xl font-semibold mb-2">Memory</h2>
+        <p>Knowledge graph and conversation history</p>
+      </div>
+    </div>
+  )
+}
+
+function SystemPage() {
+  return (
+    <div className="flex-1 flex items-center justify-center text-gray-500">
+      <div className="text-center">
+        <Cpu className="w-16 h-16 mx-auto mb-4 text-teal-500" />
+        <h2 className="text-xl font-semibold mb-2">System</h2>
+        <p>CPU, Memory, and GPU monitoring</p>
+      </div>
+    </div>
+  )
+}
+
+function VoicePage() {
+  return (
+    <div className="flex-1 flex items-center justify-center text-gray-500">
+      <div className="text-center">
+        <Headphones className="w-16 h-16 mx-auto mb-4 text-teal-500" />
+        <h2 className="text-xl font-semibold mb-2">Voice Settings</h2>
+        <p>Configure speech recognition and synthesis</p>
+      </div>
+    </div>
+  )
+}
+
+function SettingsPage() {
+  return (
+    <div className="flex-1 flex items-center justify-center text-gray-500">
+      <div className="text-center">
+        <Settings className="w-16 h-16 mx-auto mb-4 text-teal-500" />
+        <h2 className="text-xl font-semibold mb-2">Settings</h2>
+        <p>Configure JARVIS preferences</p>
+      </div>
     </div>
   )
 }
