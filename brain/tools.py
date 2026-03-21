@@ -21,9 +21,10 @@ class ToolRegistry:
 
     def __init__(self, use_cache: bool = True, use_retry: bool = True):
         self.tools: dict[str, dict[str, Any]] = {}
-        # Only match Action: toolname or Action: toolname: {json}
+        # BUG-014 fix: Only match Action: toolname or Action: toolname: {json}
+        # Use non-greedy [\s\S]+? to handle multi-line JSON args
         self._action_pattern = re.compile(
-            r"^Action:\s*(\w+)(?:\s*:\s*(\{.+\}|\[.+\]))?$",
+            r"^Action:\s*(\w+)(?:\s*:\s*(\{[\s\S]+?\}|\[[\s\S]+?\]))?",
             re.MULTILINE | re.IGNORECASE
         )
         self._thought_pattern = re.compile(
@@ -173,7 +174,8 @@ class ToolRegistry:
         
         if tool_name is None:
             self._cache.clear_all()
-            return len(self._cache)
+            # BUG-013 fix: clear_all() sets _cache to None, return 0 instead of len(None)
+            return 0
         
         return self._cache.invalidate(tool_name, args)
 
@@ -256,46 +258,22 @@ def create_default_registry() -> ToolRegistry:
             return f"Error listing directory: {str(e)}"
     
     def search_web(args: dict) -> str:
-        """Search the web using Wikipedia API and fallback searches."""
+        """Search the web using duckduckgo-search package."""
         query = args.get("query", "")
         if not query:
             return "Error: No search query provided"
         
         try:
-            import requests
-            from urllib.parse import quote
-            
-            # Try Wikipedia API first (most reliable)
-            wiki_url = f"https://en.wikipedia.org/api/rest_v1/page/summary/{quote(query.replace(' ', '_'))}"
-            headers = {'User-Agent': 'JARVIS/1.0'}
-            resp = requests.get(wiki_url, headers=headers, timeout=10)
-            
-            if resp.status_code == 200:
-                data = resp.json()
-                title = data.get('title', '')
-                extract = data.get('extract', '')
-                if extract:
-                    return f"Wikipedia - {title}:\n{extract[:500]}"
-            
-            # Try DuckDuckGo as fallback
-            url = f"https://html.duckduckgo.com/html/?q={quote(query)}"
-            headers = {
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
-            }
-            resp = requests.get(url, headers=headers, timeout=15)
-            
-            import re
-            pattern = r'<a class="result__a" href="([^"]+)"[^>]*>([^<]+)</a>'
-            matches = re.findall(pattern, resp.text)
-            
-            if matches:
-                output = []
-                for url, title in matches[:5]:
-                    title = re.sub(r'<[^>]+>', '', title).strip()
-                    output.append(f"- {title}: {url}")
-                return "Search Results:\n" + "\n".join(output)
-            
-            return "No search results found. Please try a more specific query."
+            # BUG-018 fix: Use duckduckgo-search package instead of HTML scraping
+            from duckduckgo_search import DDGS
+            with DDGS() as ddgs:
+                results = list(ddgs.text(query, max_results=5))
+                if results:
+                    output = []
+                    for r in results[:5]:
+                        output.append(f"- {r['title']}: {r['href']}")
+                    return "Search Results:\n" + "\n".join(output)
+            return "No search results found."
         except Exception as e:
             return f"Search error: {str(e)}"
     
