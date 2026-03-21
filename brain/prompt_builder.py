@@ -93,31 +93,27 @@ class PromptBuilder:
         """
         messages: list[dict[str, str]] = []
         
-        messages.append({
-            "role": "system",
-            "content": self.system_prompt
-        })
+        # Build a single merged system message from all context parts
+        system_parts = [self.system_prompt]
         
         # Inject context if context_injector is set
         if self._context_injector is not None:
             context_summary = self._context_injector.get_context_summary()
-            messages.append({
-                "role": "system",
-                "content": f"## Environment Context\n{context_summary}"
-            })
+            system_parts.append(f"## Environment Context\n{context_summary}")
         
         if memory_context:
-            messages.append({
-                "role": "system",
-                "content": f"## Memory Context\n{memory_context}"
-            })
+            system_parts.append(f"## Memory Context\n{memory_context}")
         
         if vector_context:
             context_str = "\n".join(f"- {ctx}" for ctx in vector_context)
-            messages.append({
-                "role": "system",
-                "content": f"## Relevant Context\n{context_str}"
-            })
+            system_parts.append(f"## Relevant Context\n{context_str}")
+        
+        # Filter out empty parts and join with double newline
+        system_parts = list(filter(None, system_parts))
+        messages.append({
+            "role": "system",
+            "content": "\n\n".join(system_parts)
+        })
         
         for msg in self.conversation_history:
             if msg["role"] != "system":
