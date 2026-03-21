@@ -20,7 +20,7 @@ from loguru import logger
 
 from core.config import Config
 from memory.MemoryManager import MemoryManager
-from backend.api.dependencies import verify_api_key, get_memory_manager
+from backend.api.dependencies import verify_api_key, get_memory_manager, get_filtered_memory
 
 
 router = APIRouter()
@@ -250,20 +250,6 @@ async def get_memory_stats(manager: MemoryManager = Depends(get_memory_manager),
 
 from memory.filtered_store import FilteredMemory, MemoryFilter, MemoryEntry
 from memory.importance import MemoryEntryType
-
-# Global filtered memory instance
-_filtered_memory: FilteredMemory | None = None
-
-
-def get_filtered_memory() -> FilteredMemory:
-    """Get or create the filtered memory instance."""
-    global _filtered_memory
-    if _filtered_memory is None:
-        _filtered_memory = FilteredMemory(
-            chroma_client=None,
-            threshold=0.3
-        )
-    return _filtered_memory
 
 
 class AddMemoryRequest(BaseModel):
