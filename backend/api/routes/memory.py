@@ -276,7 +276,7 @@ class ClearMemoryRequest(BaseModel):
 
 
 @router.post("/memory/add")
-async def add_memory(request: AddMemoryRequest, _: bool = Depends(verify_api_key)) -> dict[str, Any]:
+async def add_memory(request: AddMemoryRequest, filtered_memory: FilteredMemory = Depends(get_filtered_memory), _: bool = Depends(verify_api_key)) -> dict[str, Any]:
     """
     Add a memory entry with importance filtering.
     
@@ -287,7 +287,7 @@ async def add_memory(request: AddMemoryRequest, _: bool = Depends(verify_api_key
         Entry ID and importance score
     """
     try:
-        fm = get_filtered_memory()
+        fm = filtered_memory
         
         # Parse entry type
         entry_type = MemoryEntryType(request.entry_type)
@@ -330,7 +330,8 @@ async def search_memory(
     entry_type: str | None = None,
     project: str | None = None,
     min_importance: float = 0.0,
-    limit: int = 10
+    limit: int = 10,
+    filtered_memory: FilteredMemory = Depends(get_filtered_memory)
 ) -> dict[str, Any]:
     """
     Search memory with filters.
@@ -346,7 +347,7 @@ async def search_memory(
         List of matching memory entries
     """
     try:
-        fm = get_filtered_memory()
+        fm = filtered_memory
         
         # Build filter
         filter = MemoryFilter(
@@ -380,7 +381,7 @@ async def search_memory(
 
 
 @router.get("/memory/recent")
-async def get_recent_memory(limit: int = 10) -> dict[str, Any]:
+async def get_recent_memory(limit: int = 10, filtered_memory: FilteredMemory = Depends(get_filtered_memory)) -> dict[str, Any]:
     """
     Get recent memory entries.
     
@@ -391,7 +392,7 @@ async def get_recent_memory(limit: int = 10) -> dict[str, Any]:
         List of recent memories
     """
     try:
-        fm = get_filtered_memory()
+        fm = filtered_memory
         results = fm.get_recent(limit=limit)
         
         return {
@@ -415,7 +416,7 @@ async def get_recent_memory(limit: int = 10) -> dict[str, Any]:
 
 
 @router.delete("/memory/entry/{entry_id}")
-async def delete_memory_entry(entry_id: str, _: bool = Depends(verify_api_key)) -> dict[str, Any]:
+async def delete_memory_entry(entry_id: str, filtered_memory: FilteredMemory = Depends(get_filtered_memory), _: bool = Depends(verify_api_key)) -> dict[str, Any]:
     """
     Delete a specific memory entry.
     
@@ -426,7 +427,7 @@ async def delete_memory_entry(entry_id: str, _: bool = Depends(verify_api_key)) 
         Deletion status
     """
     try:
-        fm = get_filtered_memory()
+        fm = filtered_memory
         deleted = fm.delete(entry_id)
         
         return {
@@ -440,7 +441,7 @@ async def delete_memory_entry(entry_id: str, _: bool = Depends(verify_api_key)) 
 
 
 @router.post("/memory/clear")
-async def clear_memory(request: ClearMemoryRequest, _: bool = Depends(verify_api_key)) -> dict[str, Any]:
+async def clear_memory(request: ClearMemoryRequest, filtered_memory: FilteredMemory = Depends(get_filtered_memory), _: bool = Depends(verify_api_key)) -> dict[str, Any]:
     """
     Clear memory entries.
     
@@ -451,7 +452,7 @@ async def clear_memory(request: ClearMemoryRequest, _: bool = Depends(verify_api
         Clear status
     """
     try:
-        fm = get_filtered_memory()
+        fm = filtered_memory
         
         if request.project:
             # Clear specific project
@@ -479,7 +480,7 @@ async def clear_memory(request: ClearMemoryRequest, _: bool = Depends(verify_api
 
 
 @router.get("/memory/filtered-stats")
-async def get_filtered_stats(_: bool = Depends(verify_api_key)) -> dict[str, Any]:
+async def get_filtered_stats(filtered_memory: FilteredMemory = Depends(get_filtered_memory), _: bool = Depends(verify_api_key)) -> dict[str, Any]:
     """
     Get filtered memory statistics.
     
@@ -487,7 +488,7 @@ async def get_filtered_stats(_: bool = Depends(verify_api_key)) -> dict[str, Any
         Statistics about filtered memory
     """
     try:
-        fm = get_filtered_memory()
+        fm = filtered_memory
         stats = fm.get_stats()
         
         return {
