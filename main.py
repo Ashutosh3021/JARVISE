@@ -23,7 +23,7 @@ from core.config import load_config
 
 # Import brain
 from brain.agent import ReActAgent
-from brain.router import CommandRouter
+from brain.router import CommandRouter, RouteType
 from brain.tools import create_tools_registry
 
 # Import memory
@@ -51,30 +51,6 @@ memory_manager = None
 agent = None
 voice_pipeline = None
 router = None
-
-
-def setup_logging(verbose: bool = False):
-    """Setup logging configuration."""
-    log_level = "DEBUG" if verbose else "INFO"
-    
-    # Remove default handler
-    logger.remove()
-    
-    # Add console handler
-    logger.add(
-        sys.stderr,
-        level=log_level,
-        format="<green>{time:YYYY-MM-DD HH:mm:ss}</green> | <level>{level: <8}</level> | <level>{message}</level>",
-    )
-    
-    # Add file handler
-    logger.add(
-        "./data/jarvis.log",
-        level="DEBUG",
-        rotation="10 MB",
-        retention="7 days",
-        format="{time:YYYY-MM-DD HH:mm:ss} | {level: <8} | {name}:{function}:{line} | {message}",
-    )
 
 
 def start_ui_server(config):
@@ -163,7 +139,7 @@ def run_jarvis(args):
     
     # Setup logging
     log_level = "DEBUG" if args.verbose else "INFO"
-    setup_logging(args.verbose)
+    setup_logging(verbose=args.verbose)
     logger.info("Logger initialized")
     
     # 1. Hardware detection
@@ -267,17 +243,18 @@ def run_jarvis(args):
                     # Use smart routing
                     route_result = router.route(user_input)
                     
-                    if route_result.route_type.value == "direct_tool":
+                    if route_result.route_type == RouteType.DIRECT_TOOL:
                         # Execute directly without LLM
                         logger.info(f"Direct tool execution: {route_result.tool_name}")
                         response = router.execute_direct(route_result)
-                    elif route_result.route_type.value == "llm_agent":
+                    elif route_result.route_type == RouteType.LLM_AGENT:
                         # Explicitly requested LLM
                         response = agent.run(user_input)
                     else:
                         # Unknown - default to LLM (safer)
                         logger.info("Unknown command, routing to LLM")
                         response = agent.run(user_input)
+                        router._stats.llm_agent_calls += 1
                 else:
                     # Router disabled, use LLM
                     response = agent.run(user_input)

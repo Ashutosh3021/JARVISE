@@ -220,15 +220,10 @@ def load_config(vram_mb: int | None = None) -> Config:
         ConfigValidationError: If configuration values are invalid.
         FileNotFoundError: If .env file is specified but not found.
     """
-    # Try to load .env file if it exists
-    env_path = Path(".env")
-    if env_path.exists():
-        try:
-            config = Config()
-        except Exception as e:
-            raise ConfigValidationError(f"Failed to load configuration: {e}")
-    else:
+    try:
         config = Config()
+    except Exception as e:
+        raise ConfigValidationError(f"Failed to load configuration: {e}")
     
     # Set VRAM if provided and select profile
     if vram_mb is not None:

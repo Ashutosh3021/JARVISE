@@ -6,14 +6,15 @@ import sys
 from pathlib import Path
 
 
-def setup_logging(log_level: str, log_file: str) -> None:
+def setup_logging(verbose: bool = False, log_file: str = "./data/jarvis.log") -> None:
     """
     Configure centralized logging with console and file output.
     
     Args:
-        log_level: Logging level (DEBUG, INFO, WARNING, ERROR, CRITICAL)
+        verbose: If True, set log level to DEBUG, otherwise INFO
         log_file: Path to the log file (e.g., "./data/logs/jarvis.log")
     """
+    log_level = "DEBUG" if verbose else "INFO"
     # Remove default handler
     logger.remove()
     
