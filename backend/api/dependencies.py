@@ -101,3 +101,18 @@ async def get_router(request: Request):
     if router is None:
         raise HTTPException(status_code=503, detail="Router not initialized")
     return router
+
+
+async def get_filtered_memory(request: Request) -> "FilteredMemory":
+    """Get the shared filtered memory from app.state.memory.filtered_memory."""
+    from memory.MemoryManager import MemoryManager
+    from memory.filtered_store import FilteredMemory
+    memory_obj = getattr(request.app.state, 'memory', None)
+    if memory_obj is None:
+        raise HTTPException(status_code=503, detail="Memory not initialized")
+    if not isinstance(memory_obj, MemoryManager):
+        raise HTTPException(status_code=503, detail="Memory not properly initialized")
+    filtered = getattr(memory_obj, 'filtered_memory', None)
+    if filtered is None:
+        raise HTTPException(status_code=503, detail="Filtered memory not available")
+    return filtered
