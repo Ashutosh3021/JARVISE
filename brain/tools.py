@@ -355,6 +355,20 @@ def create_default_registry() -> ToolRegistry:
     return registry
 
 
+# Lazy-initialized heavy tool instances (BUG-011 fix)
+_browser = None
+_web_search_tool = None
+_filesystem = None
+_code_exec = None
+_google_calendar = None
+_google_email = None
+_microsoft_outlook = None
+_system_monitor = None
+
+# Simple in-memory storage for conversation context (shared across registries)
+_memory_store = {}
+
+
 def create_tools_registry() -> ToolRegistry:
     """Create a comprehensive registry with all JARVIS tools.
     
@@ -371,33 +385,20 @@ def create_tools_registry() -> ToolRegistry:
     Returns:
         ToolRegistry with all tools registered
     """
-    from tools.browser import BrowserTool
-    from tools.web_search import WebSearchTool
-    from tools.filesystem import FilesystemTool
-    from tools.code_exec import CodeExecutionTool
-    from tools.google_calendar import GoogleCalendarTool
-    from tools.google_email import GoogleEmailTool
-    from tools.microsoft_outlook import MicrosoftOutlookTool
-    from tools.system_monitor import SystemMonitorTool
-    
     registry = ToolRegistry()
     
-    # Create tool instances
-    browser = BrowserTool()
-    web_search = WebSearchTool()
-    filesystem = FilesystemTool()
-    code_exec = CodeExecutionTool()
-    google_calendar = GoogleCalendarTool()
-    google_email = GoogleEmailTool()
-    microsoft_outlook = MicrosoftOutlookTool()
-    system_monitor = SystemMonitorTool()
+    # === HEAVY TOOLS (lazy-initialized) ===
     
     # Register browser tool
     def execute_browser(args: dict) -> str:
         """Execute browser tool action."""
+        global _browser
+        if _browser is None:
+            from tools.browser import BrowserTool
+            _browser = BrowserTool()
         action = args.get("action", "navigate")
         url = args.get("url", "")
-        return browser.execute(action=action, url=url)
+        return _browser.execute(action=action, url=url)
     
     registry.register(
         "browser",
@@ -408,9 +409,14 @@ def create_tools_registry() -> ToolRegistry:
     # Register web search tool
     def execute_search(args: dict) -> str:
         """Execute web search."""
+        global _web_search_tool
+        if _web_search_tool is None:
+            from tools.web_search import WebSearchTool
+            _web_search_tool = WebSearchTool()
         query = args.get("query", "")
         max_results = args.get("max_results", 10)
-        return web_search.execute(query=query, max_results=max_results)
+        # BUG-012 fix: use num_results parameter (not max_results)
+        return _web_search_tool.execute(query=query, num_results=max_results)
     
     registry.register(
         "web_search",
@@ -421,10 +427,14 @@ def create_tools_registry() -> ToolRegistry:
     # Register filesystem tool
     def execute_filesystem(args: dict) -> str:
         """Execute filesystem operation."""
+        global _filesystem
+        if _filesystem is None:
+            from tools.filesystem import FilesystemTool
+            _filesystem = FilesystemTool()
         action = args.get("action", "list")
         path = args.get("path", ".")
         clean_args = {k: v for k, v in args.items() if k not in ("action", "path")}
-        return filesystem.execute(action=action, path=path, **clean_args)
+        return _filesystem.execute(action=action, path=path, **clean_args)
     
     registry.register(
         "filesystem",
@@ -435,8 +445,12 @@ def create_tools_registry() -> ToolRegistry:
     # Register code execution tool
     def execute_code(args: dict) -> str:
         """Execute Python code."""
+        global _code_exec
+        if _code_exec is None:
+            from tools.code_exec import CodeExecutionTool
+            _code_exec = CodeExecutionTool()
         code = args.get("code", "")
-        return code_exec.execute(code=code)
+        return _code_exec.execute(code=code)
     
     registry.register(
         "execute_code",
@@ -447,9 +461,13 @@ def create_tools_registry() -> ToolRegistry:
     # Register Google Calendar tool
     def execute_calendar(args: dict) -> str:
         """Execute Google Calendar operation."""
+        global _google_calendar
+        if _google_calendar is None:
+            from tools.google_calendar import GoogleCalendarTool
+            _google_calendar = GoogleCalendarTool()
         action = args.get("action", "list_events")
         clean_args = {k: v for k, v in args.items() if k != "action"}
-        return google_calendar.execute(action=action, **clean_args)
+        return _google_calendar.execute(action=action, **clean_args)
     
     registry.register(
         "google_calendar",
@@ -460,9 +478,13 @@ def create_tools_registry() -> ToolRegistry:
     # Register Google Email tool
     def execute_gmail(args: dict) -> str:
         """Execute Google Email operation."""
+        global _google_email
+        if _google_email is None:
+            from tools.google_email import GoogleEmailTool
+            _google_email = GoogleEmailTool()
         action = args.get("action", "list_emails")
         clean_args = {k: v for k, v in args.items() if k != "action"}
-        return google_email.execute(action=action, **clean_args)
+        return _google_email.execute(action=action, **clean_args)
     
     registry.register(
         "google_email",
@@ -473,9 +495,13 @@ def create_tools_registry() -> ToolRegistry:
     # Register Microsoft Outlook tool
     def execute_outlook(args: dict) -> str:
         """Execute Microsoft Outlook operation."""
+        global _microsoft_outlook
+        if _microsoft_outlook is None:
+            from tools.microsoft_outlook import MicrosoftOutlookTool
+            _microsoft_outlook = MicrosoftOutlookTool()
         action = args.get("action", "list_emails")
         clean_args = {k: v for k, v in args.items() if k != "action"}
-        return microsoft_outlook.execute(action=action, **clean_args)
+        return _microsoft_outlook.execute(action=action, **clean_args)
     
     registry.register(
         "outlook",
@@ -486,9 +512,13 @@ def create_tools_registry() -> ToolRegistry:
     # Register system monitor tool
     def execute_monitor(args: dict) -> str:
         """Execute system monitoring."""
+        global _system_monitor
+        if _system_monitor is None:
+            from tools.system_monitor import SystemMonitorTool
+            _system_monitor = SystemMonitorTool()
         action = args.get("action", "all")
         clean_args = {k: v for k, v in args.items() if k != "action"}
-        return system_monitor.execute(action=action, **clean_args)
+        return _system_monitor.execute(action=action, **clean_args)
     
     registry.register(
         "system_monitor",
@@ -496,7 +526,8 @@ def create_tools_registry() -> ToolRegistry:
         "Get CPU, memory, disk, network statistics"
     )
     
-    # Register get_time and get_date (built-in)
+    # === BASIC TOOLS (BUG-015 fix: add missing memory tools) ===
+    
     def get_time(args: dict) -> str:
         from datetime import datetime
         return datetime.now().strftime("%I:%M %p")
@@ -505,8 +536,51 @@ def create_tools_registry() -> ToolRegistry:
         from datetime import datetime
         return datetime.now().strftime("%A, %B %d, %Y")
     
+    def get_working_directory(args: dict) -> str:
+        from pathlib import Path
+        return str(Path.cwd())
+    
+    def remember(args: dict) -> str:
+        """Remember something for future reference."""
+        key = args.get("key", "")
+        value = args.get("value", "")
+        if not key or not value:
+            return "Error: Both 'key' and 'value' are required"
+        _memory_store[key] = value
+        return f"Remembered: {key} = {value}"
+    
+    def recall(args: dict) -> str:
+        """Recall something from memory."""
+        key = args.get("key", "")
+        if not key:
+            return "Error: 'key' is required"
+        value = _memory_store.get(key, f"No memory found for: {key}")
+        return value
+    
+    def list_memories(args: dict) -> str:
+        """List all remembered items."""
+        if not _memory_store:
+            return "No memories stored"
+        return "\n".join([f"- {k}: {v}" for k, v in _memory_store.items()])
+    
+    def forget(args: dict) -> str:
+        """Forget a specific memory."""
+        key = args.get("key", "")
+        if not key:
+            return "Error: 'key' is required"
+        if key in _memory_store:
+            del _memory_store[key]
+            return f"Forgotten: {key}"
+        return f"No memory found for: {key}"
+    
+    # Register basic tools
     registry.register("get_time", get_time, "Get the current time")
     registry.register("get_date", get_date, "Get the current date")
+    registry.register("pwd", get_working_directory, "Get current working directory")
+    registry.register("remember", remember, "Remember something (key, value)")
+    registry.register("recall", recall, "Recall a remembered item by key")
+    registry.register("list_memories", list_memories, "List all remembered items")
+    registry.register("forget", forget, "Forget a specific memory")
     
     return registry
 
