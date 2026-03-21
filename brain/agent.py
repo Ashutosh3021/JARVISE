@@ -159,13 +159,13 @@ class ReActAgent:
                 
                 if action_name is None:
                     logger.info("No action detected, returning final answer")
-                    yield content, True
+                    yield self._clean_response(content), True
                     break
                 
                 # Check if we've exceeded max tool calls
                 if tool_calls >= max_tool_calls:
                     logger.warning(f"Max tool calls ({max_tool_calls}) reached, returning current response")
-                    yield content, True
+                    yield self._clean_response(content), True
                     break
                 
                 logger.info(f"Executing tool: {action_name}")
@@ -190,7 +190,7 @@ class ReActAgent:
                 break
         
         self.prompt_builder.add_message("user", user_input)
-        self.prompt_builder.add_message("assistant", full_response)
+        self.prompt_builder.add_message("assistant", self._clean_response(full_response))
 
     def _clean_response(self, response: str) -> str:
         """Remove Thought/Action lines from response for user-facing output."""
