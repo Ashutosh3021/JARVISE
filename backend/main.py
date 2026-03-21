@@ -18,9 +18,35 @@ from loguru import logger
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Lifespan context for startup and shutdown events."""
-    # Startup
-    logger.info("Starting JARVIS backend server...")
+    from brain.agent import ReActAgent
+    from brain.router import CommandRouter
+    from memory import MemoryManager
+    from core.config import Config
+    from brain.tools import create_tools_registry
+    
+    # Startup: create shared instances
+    logger.info("Creating shared agent...")
+    try:
+        app.state.agent = ReActAgent(tool_registry=create_tools_registry())
+    except Exception as e:
+        logger.error(f"Failed to create agent: {e}")
+        app.state.agent = ReActAgent()  # Fallback without tools
+    
+    logger.info("Creating shared memory manager...")
+    try:
+        config = Config()
+        app.state.memory = MemoryManager(config)
+    except Exception as e:
+        logger.error(f"Failed to create memory manager: {e}")
+        app.state.memory = None
+    
+    logger.info("Creating shared router...")
+    tool_registry = getattr(app.state.agent, 'tools', None)
+    app.state.router = CommandRouter(tool_registry=tool_registry) if tool_registry else None
+    
+    logger.info("JARVIS backend server started with shared state")
     yield
+    
     # Shutdown
     logger.info("Shutting down JARVIS backend server...")
 

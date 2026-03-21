@@ -4,10 +4,14 @@ API Authentication Dependencies
 Provides FastAPI dependencies for API key authentication.
 """
 
+from typing import TYPE_CHECKING
 from fastapi import Depends, HTTPException, Request
 from fastapi.security import APIKeyHeader
 
 from core.config import Config
+
+if TYPE_CHECKING:
+    from brain.agent import ReActAgent
 
 _api_key_header = APIKeyHeader(name="X-API-Key", auto_error=False)
 
@@ -70,3 +74,30 @@ async def require_api_key(
             detail="API key not configured. Set API_KEY in environment."
         )
     return True
+
+
+async def get_agent(request: Request) -> "ReActAgent":
+    """Get the shared agent from app.state."""
+    from brain.agent import ReActAgent
+    agent = getattr(request.app.state, 'agent', None)
+    if agent is None:
+        raise HTTPException(status_code=503, detail="Agent not initialized")
+    return agent
+
+
+async def get_memory_manager(request: Request) -> "MemoryManager":
+    """Get the shared memory manager from app.state."""
+    from memory.MemoryManager import MemoryManager
+    memory: MemoryManager = getattr(request.app.state, 'memory', None)
+    if memory is None:
+        raise HTTPException(status_code=503, detail="Memory not initialized")
+    return memory
+
+
+async def get_router(request: Request):
+    """Get the shared router from app.state."""
+    from brain.router import CommandRouter
+    router = getattr(request.app.state, 'router', None)
+    if router is None:
+        raise HTTPException(status_code=503, detail="Router not initialized")
+    return router

@@ -20,23 +20,10 @@ from loguru import logger
 
 from core.config import Config
 from memory.MemoryManager import MemoryManager
-from backend.api.dependencies import verify_api_key
+from backend.api.dependencies import verify_api_key, get_memory_manager
 
 
 router = APIRouter()
-
-
-# Global memory manager instance
-_memory_manager: MemoryManager | None = None
-
-
-def get_memory_manager() -> MemoryManager:
-    """Get or create the memory manager instance."""
-    global _memory_manager
-    if _memory_manager is None:
-        config = Config()
-        _memory_manager = MemoryManager(config)
-    return _memory_manager
 
 
 # Request/Response models
@@ -59,7 +46,7 @@ class MemoryFileUpdate(BaseModel):
 
 
 @router.get("/memory")
-async def list_memories(session_id: str = "default", limit: int = 50) -> dict[str, Any]:
+async def list_memories(session_id: str = "default", limit: int = 50, manager: MemoryManager = Depends(get_memory_manager)) -> dict[str, Any]:
     """
     List memories from the vector store.
     
@@ -71,7 +58,6 @@ async def list_memories(session_id: str = "default", limit: int = 50) -> dict[st
         List of memory entries
     """
     try:
-        manager = get_memory_manager()
         memories = manager.get_session_history(session_id=session_id, limit=limit)
         return {
             "status": "success",
@@ -85,7 +71,7 @@ async def list_memories(session_id: str = "default", limit: int = 50) -> dict[st
 
 
 @router.get("/memory/{memory_id}")
-async def get_memory(memory_id: str) -> dict[str, Any]:
+async def get_memory_by_id(memory_id: str, manager: MemoryManager = Depends(get_memory_manager)) -> dict[str, Any]:
     """
     Get a specific memory by ID.
     
@@ -98,7 +84,6 @@ async def get_memory(memory_id: str) -> dict[str, Any]:
     # Note: VectorStore doesn't have a direct get by ID method
     # This would require adding that method to the store
     try:
-        manager = get_memory_manager()
         # Get all and find the matching one
         memories = manager.get_session_history(limit=1000)
         for mem in memories:
@@ -116,7 +101,7 @@ async def get_memory(memory_id: str) -> dict[str, Any]:
 
 
 @router.post("/memory")
-async def create_memory(entry: MemoryEntry, _: bool = Depends(verify_api_key)) -> dict[str, Any]:
+async def create_memory(entry: MemoryEntry, manager: MemoryManager = Depends(get_memory_manager), _: bool = Depends(verify_api_key)) -> dict[str, Any]:
     """
     Create a new memory entry.
     
@@ -127,7 +112,6 @@ async def create_memory(entry: MemoryEntry, _: bool = Depends(verify_api_key)) -
         Created memory entry with ID
     """
     try:
-        manager = get_memory_manager()
         memory_id = manager.save_conversation(
             user_query=entry.query,
             assistant_response=entry.response,
@@ -145,7 +129,7 @@ async def create_memory(entry: MemoryEntry, _: bool = Depends(verify_api_key)) -
 
 
 @router.delete("/memory/{memory_id}")
-async def delete_memory(memory_id: str, _: bool = Depends(verify_api_key)) -> dict[str, Any]:
+async def delete_memory(memory_id: str, manager: MemoryManager = Depends(get_memory_manager), _: bool = Depends(verify_api_key)) -> dict[str, Any]:
     """
     Delete a memory entry.
     
@@ -159,7 +143,6 @@ async def delete_memory(memory_id: str, _: bool = Depends(verify_api_key)) -> di
         Deletion status
     """
     try:
-        manager = get_memory_manager()
         # Try to delete by session
         deleted = manager.delete_session(memory_id)
         return {
@@ -173,7 +156,7 @@ async def delete_memory(memory_id: str, _: bool = Depends(verify_api_key)) -> di
 
 
 @router.get("/memory.md")
-async def get_memory_file() -> dict[str, Any]:
+async def get_memory_file(manager: MemoryManager = Depends(get_memory_manager)) -> dict[str, Any]:
     """
     Get the content of MEMORY.md file.
     
@@ -181,7 +164,6 @@ async def get_memory_file() -> dict[str, Any]:
         MEMORY.md file content
     """
     try:
-        manager = get_memory_manager()
         content = manager.get_file_context()
         return {
             "status": "success",
@@ -193,7 +175,7 @@ async def get_memory_file() -> dict[str, Any]:
 
 
 @router.put("/memory.md")
-async def update_memory_file(update: MemoryFileUpdate, _: bool = Depends(verify_api_key)) -> dict[str, Any]:
+async def update_memory_file(update: MemoryFileUpdate, manager: MemoryManager = Depends(get_memory_manager), _: bool = Depends(verify_api_key)) -> dict[str, Any]:
     """
     Update the MEMORY.md file content.
     
@@ -204,7 +186,6 @@ async def update_memory_file(update: MemoryFileUpdate, _: bool = Depends(verify_
         Update status
     """
     try:
-        manager = get_memory_manager()
         # Use the internal _write_file method via the controller
         manager.memory_file._write_file(update.content)
         return {
@@ -217,7 +198,7 @@ async def update_memory_file(update: MemoryFileUpdate, _: bool = Depends(verify_
 
 
 @router.post("/memory/fact")
-async def save_fact(request: FactRequest, _: bool = Depends(verify_api_key)) -> dict[str, Any]:
+async def save_fact(request: FactRequest, manager: MemoryManager = Depends(get_memory_manager), _: bool = Depends(verify_api_key)) -> dict[str, Any]:
     """
     Save an important fact to MEMORY.md.
     
@@ -228,7 +209,6 @@ async def save_fact(request: FactRequest, _: bool = Depends(verify_api_key)) -> 
         Save status
     """
     try:
-        manager = get_memory_manager()
         manager.save_fact(request.fact)
         return {
             "status": "success",
@@ -240,7 +220,7 @@ async def save_fact(request: FactRequest, _: bool = Depends(verify_api_key)) -> 
 
 
 @router.get("/memory/stats")
-async def get_memory_stats(_: bool = Depends(verify_api_key)) -> dict[str, Any]:
+async def get_memory_stats(manager: MemoryManager = Depends(get_memory_manager), _: bool = Depends(verify_api_key)) -> dict[str, Any]:
     """
     Get memory system statistics.
     
@@ -248,7 +228,6 @@ async def get_memory_stats(_: bool = Depends(verify_api_key)) -> dict[str, Any]:
         Statistics about vector store and memory file
     """
     try:
-        manager = get_memory_manager()
         stats = manager.get_stats()
         return {
             "status": "success",

@@ -7,26 +7,22 @@ Provides WebSocket endpoint for live token streaming from the agent.
 import asyncio
 import json
 
-from fastapi import APIRouter, WebSocket, WebSocketDisconnect
+from fastapi import APIRouter, WebSocket, WebSocketDisconnect, Depends
 
 from loguru import logger
 
 from backend.api.websocket.manager import manager
+from backend.api.dependencies import get_agent
 
-# Import the ReActAgent from brain
+# Import the ReActAgent type only
 from brain.agent import ReActAgent
-from brain.tools import create_tools_registry
 
 
 router = APIRouter()
 
 
-# Global agent instance - with tools!
-agent = ReActAgent(tool_registry=create_tools_registry())
-
-
 @router.websocket("/ws/chat")
-async def websocket_chat(websocket: WebSocket):
+async def websocket_chat(websocket: WebSocket, agent: ReActAgent = Depends(get_agent)):
     """
     WebSocket endpoint for chat with live token streaming.
     
@@ -157,7 +153,7 @@ async def websocket_chat(websocket: WebSocket):
 
 
 @router.post("/chat/reset")
-async def reset_chat():
+async def reset_chat(agent: ReActAgent = Depends(get_agent)):
     """Reset the chat conversation history."""
     agent.reset()
     return {"status": "success", "message": "Chat history reset"}
