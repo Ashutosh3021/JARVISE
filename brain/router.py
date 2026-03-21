@@ -463,8 +463,8 @@ class CommandRouter:
         
         for pattern in self._direct_commands:
             distance = self._levenshtein_distance(normalized, pattern)
-            # Allow up to 3 edits for matching
-            if distance < best_distance and distance <= 3:
+            # Allow up to 3 edits for matching, with length ratio guard to prevent false positives
+            if distance < best_distance and distance <= 3 and distance / max(len(normalized), len(pattern)) < 0.4:
                 best_distance = distance
                 best_match = pattern
         
@@ -501,11 +501,23 @@ class CommandRouter:
         result = {}
         for key, value in args.items():
             if value == "*":
-                # Extract from user input
-                result[key] = user_input
+                # Extract from user input — extract ONLY the wildcard portion
+                # Find which pattern this args came from by matching all wildcard patterns
+                for pattern in self._direct_commands:
+                    if self._direct_commands[pattern][0] == self._direct_commands.get(list(args.keys())[0]) or \
+                       (pattern, self._direct_commands[pattern]) in [(k, tuple(self._direct_commands.get(k) or [])) for k in self._direct_commands]:
+                        # Simple approach: strip matched prefix from user input
+                        prefix = pattern.replace("*", "").strip()
+                        wildcard_value = user_input.lower().replace(prefix, "").strip()
+                        result[key] = wildcard_value if wildcard_value else user_input
+                        break
+                else:
+                    result[key] = user_input
             elif isinstance(value, str) and "*" in value:
                 # Handle patterns like "search *"
-                result[key] = value.replace("*", user_input.replace("search ", "").replace("google ", ""))
+                prefix = value.rsplit("*", 1)[0].strip()
+                wildcard_value = user_input.lower().replace(prefix, "").strip()
+                result[key] = wildcard_value if wildcard_value else user_input
             else:
                 result[key] = value
         return result
