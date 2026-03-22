@@ -415,6 +415,32 @@ except Exception as e:
     report("BUG-027 filtered memory check", False, f"Error: {e}")
 
 # ─────────────────────────────────────────────
+# E2E: Full Chat Round Trip
+# ─────────────────────────────────────────────
+print("\n── E2E: Full Chat Round Trip ──")
+try:
+    from brain.agent import ReActAgent
+    from brain.tools import create_tools_registry
+    from brain.prompt_builder import PromptBuilder
+
+    pb = PromptBuilder()
+    agent = ReActAgent(tool_registry=create_tools_registry(), prompt_builder=pb)
+    response = agent.run("what time is it")
+
+    passed1 = isinstance(response, str) and len(response) > 0 and "Sorry" not in response
+    report("E2E agent returns real response", passed1,
+           f"'{response[:80]}'" if len(response) <= 80 else f"'{response[:80]}...'")
+
+    has_raw = response.strip().startswith("Thought:") or "\nThought:" in response
+    report("E2E response has no raw Thought:/Action: lines", not has_raw,
+           "Clean ✅" if not has_raw else "Raw Thought: lines found")
+
+    report("E2E conversation saved to history", len(pb.conversation_history) >= 2,
+           f"{len(pb.conversation_history)} messages in history")
+except Exception as e:
+    report("E2E chat round trip", False, f"Ollama running? error: {e}")
+
+# ─────────────────────────────────────────────
 # SUMMARY
 # ─────────────────────────────────────────────
 print("\n" + "="*60)
