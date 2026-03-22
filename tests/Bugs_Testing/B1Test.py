@@ -1,8 +1,8 @@
 """
 B-1 UAT Test Suite
 Run from project root: PYTHONIOENCODING=utf-8 python tests/Bugs_Testing/B1Test.py
-Covers: BUG-001, 003, 004, 005, 011, 012, 013, 014, 015, 016, 017, 018, 025, 027, 031, 032, 033, 038
-Total: 27 checks across 18 bugs (17 core + 1 gap fix)
+Covers: BUG-001, 003, 004, 005, 011, 012, 013, 014, 015, 016, 017, 018, 025, 027, 031, 032, 033, 038, 041
+Total: 29 checks across 19 bugs (17 core + 1 gap fix + 1 new bug)
 """
 
 import sys
@@ -413,6 +413,36 @@ try:
 
 except Exception as e:
     report("BUG-027 filtered memory check", False, f"Error: {e}")
+
+# ─────────────────────────────────────────────
+# BUG-041: max_tool_calls empty response fix
+# ─────────────────────────────────────────────
+print("\n── BUG-041 | B-1.2 | max_tool_calls empty response ──")
+try:
+    src_run = read_source("brain/agent.py")
+    # In run(), max_tool_calls branch should call llm.chat() for final answer
+    run_section = src_run[src_run.find("def run("):src_run.find("def stream_run(")]
+    max_run = run_section[run_section.find("if tool_calls >= max_tool_calls"):]
+    next_break = max_run.find("break")
+    max_run = max_run[:next_break]
+    run_asks_llm = "Please give your final answer now" in max_run and "llm.chat" in max_run
+    passed_run = run_asks_llm
+    report("BUG-041 run() asks LLM for final answer after max calls", passed_run,
+           "Final answer request found ✅" if passed_run else
+           "run() still cleans content — returns empty string on max_tool_calls")
+
+    # In stream_run(), max_tool_calls branch should also call llm.chat() for final answer
+    stream_section = src_run[src_run.find("def stream_run("):]
+    max_stream = stream_section[stream_section.find("if tool_calls >= max_tool_calls"):]
+    next_break_s = max_stream.find("break")
+    max_stream = max_stream[:next_break_s]
+    stream_asks_llm = "Please give your final answer now" in max_stream and "llm.chat" in max_stream
+    passed_stream = stream_asks_llm
+    report("BUG-041 stream_run() asks LLM for final answer after max calls", passed_stream,
+           "Final answer request found ✅" if passed_stream else
+           "stream_run() still cleans content — returns empty string on max_tool_calls")
+except Exception as e:
+    report("BUG-041 max_tool_calls fix", False, f"Error: {e}")
 
 # ─────────────────────────────────────────────
 # E2E: Full Chat Round Trip

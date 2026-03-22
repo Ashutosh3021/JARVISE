@@ -85,8 +85,14 @@ class ReActAgent:
                 
                 # Check if we've exceeded max tool calls
                 if tool_calls >= max_tool_calls:
-                    logger.warning(f"Max tool calls ({max_tool_calls}) reached, returning current response")
-                    full_response = self._clean_response(content)
+                    logger.warning(f"Max tool calls ({max_tool_calls}) reached, requesting final answer")
+                    # Don't clean — content is just Thought:/Action: lines (empty after cleaning).
+                    # Ask LLM for a natural final answer instead.
+                    messages.append({"role": "assistant", "content": content})
+                    messages.append({"role": "user", "content": "Please give your final answer now without using any more tools."})
+                    final = self.llm.chat(messages)
+                    full_response = final.get("message", {}).get("content", "")
+                    full_response = self._clean_response(full_response)
                     break
                 
                 logger.info(f"Executing tool: {action_name}")
@@ -164,8 +170,16 @@ class ReActAgent:
                 
                 # Check if we've exceeded max tool calls
                 if tool_calls >= max_tool_calls:
-                    logger.warning(f"Max tool calls ({max_tool_calls}) reached, returning current response")
-                    yield self._clean_response(content), True
+                    logger.warning(f"Max tool calls ({max_tool_calls}) reached, requesting final answer")
+                    # Don't clean — content is just Thought:/Action: lines (empty after cleaning).
+                    # Ask LLM for a natural final answer instead.
+                    messages.append({"role": "assistant", "content": content})
+                    messages.append({"role": "user", "content": "Please give your final answer now without using any more tools."})
+                    final = self.llm.chat(messages)
+                    final_content = final.get("message", {}).get("content", "")
+                    final_content = self._clean_response(final_content)
+                    yield final_content, True
+                    full_response = final_content
                     break
                 
                 logger.info(f"Executing tool: {action_name}")
