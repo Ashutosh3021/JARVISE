@@ -87,13 +87,12 @@ class STTEngine:
         if self._model is None:
             raise RuntimeError("STT model not loaded")
         
-        # Convert to float32 if needed
-        if audio_data.dtype != np.float32:
+        # Single-pass normalization — avoid double division
+        if audio_data.dtype == np.int16:
             audio_data = audio_data.astype(np.float32) / 32768.0
-        
-        # Normalize if needed
-        if audio_data.max() > 1.0:
-            audio_data = audio_data / 32768.0
+        elif audio_data.dtype != np.float32:
+            audio_data = audio_data.astype(np.float32)
+        audio_data = np.clip(audio_data, -1.0, 1.0)
         
         # Save to temp file (faster-whisper requires file input)
         with tempfile.NamedTemporaryFile(delete=False, suffix='.wav') as f:
