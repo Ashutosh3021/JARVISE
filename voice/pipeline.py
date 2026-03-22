@@ -84,11 +84,10 @@ class VoicePipeline:
         # VAD
         self._vad = VADWrapper(mode=vad_mode)
         
-        # STT
-        try:
-            self._stt = STTEngine(model_size=stt_model, device=stt_device)
-        except Exception as e:
-            logger.warning(f"Failed to load STT with {stt_device}, falling back to CPU: {e}")
+        # STT — detect CUDA before instantiation to avoid double model load
+        if torch.cuda.is_available():
+            self._stt = STTEngine(model_size=stt_model, device="cuda")
+        else:
             self._stt = STTEngine(model_size=stt_model, device="cpu", compute_type="float32")
         
         # TTS
@@ -115,7 +114,7 @@ class VoicePipeline:
         frame_bytes = frame_size * 2  # 2 bytes per int16 sample = 640 bytes
         for i in range(0, len(pcm) - frame_bytes, frame_bytes):
             frame = pcm[i:i + frame_bytes]
-            if self._vad.is_speech(frame, sample_rate):
+            if self._vad.is_speech(frame):
                 return True
         return False
     
