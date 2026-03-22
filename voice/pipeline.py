@@ -7,6 +7,7 @@ import numpy as np
 from typing import Optional, Callable, Tuple
 import threading
 import time
+import torch
 from loguru import logger
 
 from .keyboard_handler import KeyboardHandler
@@ -102,6 +103,22 @@ class VoicePipeline:
         
         logger.info("Voice pipeline initialized")
     
+    def _has_speech(self, audio: np.ndarray, sample_rate: int = 16000) -> bool:
+        """
+        Check if audio contains speech using VAD with proper 20ms framing.
+        
+        Contract C-3: VAD requires int16 PCM frames, exactly 10/20/30ms at 16000Hz.
+        """
+        frame_duration_ms = 20
+        frame_size = int(sample_rate * frame_duration_ms / 1000)  # 320 samples
+        pcm = (audio * 32768).astype(np.int16).tobytes()
+        frame_bytes = frame_size * 2  # 2 bytes per int16 sample = 640 bytes
+        for i in range(0, len(pcm) - frame_bytes, frame_bytes):
+            frame = pcm[i:i + frame_bytes]
+            if self._vad.is_speech(frame, sample_rate):
+                return True
+        return False
+    
     def start(self):
         """Start the voice pipeline."""
         if self._is_active:
@@ -181,8 +198,7 @@ class VoicePipeline:
             return
         
         # Check for speech using VAD
-        audio_bytes = audio.tobytes()
-        if not self._vad.is_speech(audio_bytes):
+        if not self._has_speech(audio):
             logger.info("No speech detected by VAD")
             return
         
