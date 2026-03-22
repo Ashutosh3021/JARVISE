@@ -209,6 +209,30 @@ def run_jarvis(args):
             logger.warning(f"Voice pipeline failed to initialize: {e}")
             logger.warning("Running in text-only mode")
             args.text_only = True
+        else:
+            # Wire transcription callback — Contract C-7: MUST be before start()
+            def handle_transcription(text: str, confidence: float):
+                """Process transcribed speech through router or agent, then speak response."""
+                logger.info(f"Voice input: '{text}' (confidence: {confidence:.2f})")
+                try:
+                    if router:
+                        route_result = router.route(text)
+                        if route_result.route_type == RouteType.DIRECT_TOOL:
+                            response = router.execute_direct(route_result)
+                        elif route_result.route_type == RouteType.CHAIN:
+                            response = router.execute_chain(route_result, text)
+                        else:
+                            response = agent.run(text)
+                    else:
+                        response = agent.run(text)
+                    voice_pipeline.speak_async(response)
+                except Exception as e:
+                    logger.error(f"Error processing voice input: {e}")
+                    voice_pipeline.speak_async(f"I encountered an error processing that.")
+            
+            voice_pipeline.on_transcription(handle_transcription)
+            voice_pipeline.start()
+            logger.info("Voice pipeline started")
     
     # 6. Start UI server (if not headless) in background thread
     if not args.headless:
