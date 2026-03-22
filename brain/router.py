@@ -334,7 +334,7 @@ class CommandRouter:
                 result = RouterResult(
                     route_type=RouteType.DIRECT_TOOL,
                     tool_name=pref.tool_name,
-                    tool_args=self._substitute_wildcards(pref.tool_args, user_input),
+                    tool_args=self._substitute_wildcards(pref.tool_args, user_input, pref.tool_name),
                     confidence=pref.confidence / 10.0,  # Convert 1-10 to 0.1-1.0
                     execution_time_ms=execution_time,
                 )
@@ -350,7 +350,7 @@ class CommandRouter:
             result = RouterResult(
                 route_type=RouteType.DIRECT_TOOL,
                 tool_name=tool_name,
-                tool_args=self._substitute_wildcards(tool_args, user_input),
+                tool_args=self._substitute_wildcards(tool_args, user_input, tool_name),
                 confidence=1.0,
                 execution_time_ms=execution_time,
             )
@@ -366,7 +366,7 @@ class CommandRouter:
             result = RouterResult(
                 route_type=RouteType.DIRECT_TOOL,
                 tool_name=tool_name,
-                tool_args=self._substitute_wildcards(tool_args, user_input),
+                tool_args=self._substitute_wildcards(tool_args, user_input, tool_name),
                 confidence=1.0,
                 execution_time_ms=execution_time,
             )
@@ -382,7 +382,7 @@ class CommandRouter:
             result = RouterResult(
                 route_type=RouteType.DIRECT_TOOL,
                 tool_name=wildcard_result[0],
-                tool_args=self._substitute_wildcards(wildcard_result[1], user_input),
+                tool_args=self._substitute_wildcards(wildcard_result[1], user_input, wildcard_result[0]),
                 confidence=0.9,
                 execution_time_ms=execution_time,
             )
@@ -398,7 +398,7 @@ class CommandRouter:
             result = RouterResult(
                 route_type=RouteType.DIRECT_TOOL,
                 tool_name=fuzzy_result[0],
-                tool_args=self._substitute_wildcards(fuzzy_result[1], user_input),
+                tool_args=self._substitute_wildcards(fuzzy_result[1], user_input, fuzzy_result[0]),
                 confidence=fuzzy_result[2],
                 execution_time_ms=execution_time,
             )
@@ -496,21 +496,40 @@ class CommandRouter:
         
         return previous_row[-1]
     
-    def _substitute_wildcards(self, args: dict, user_input: str) -> dict:
-        """Substitute wildcard placeholders in tool arguments."""
+    def _substitute_wildcards(self, args: dict, user_input: str, tool_name: str | None = None) -> dict:
+        """Substitute wildcard placeholders in tool arguments.
+        
+        Finds the wildcard pattern (e.g. "search *") for the given tool_name,
+        then strips the pattern prefix from user_input to extract only the
+        wildcard portion (e.g. "black holes" from "search black holes").
+        When multiple patterns map to the same tool+args (e.g. "search *" and
+        "google *"), picks the one whose prefix appears in the user_input.
+        """
         result = {}
         for key, value in args.items():
             if value == "*":
-                # Extract from user input — extract ONLY the wildcard portion
-                # Find which pattern this args came from by matching all wildcard patterns
+                # Find wildcard patterns for the given tool_name
+                candidates = []
                 for pattern in self._direct_commands:
-                    if self._direct_commands[pattern][0] == self._direct_commands.get(list(args.keys())[0]) or \
-                       (pattern, self._direct_commands[pattern]) in [(k, tuple(self._direct_commands.get(k) or [])) for k in self._direct_commands]:
-                        # Simple approach: strip matched prefix from user input
-                        prefix = pattern.replace("*", "").strip()
-                        wildcard_value = user_input.lower().replace(prefix, "").strip()
-                        result[key] = wildcard_value if wildcard_value else user_input
+                    if "*" not in pattern:
+                        continue
+                    tn, cmd_args = self._direct_commands[pattern]
+                    if tn == tool_name and cmd_args.get(key) == "*":
+                        candidates.append(pattern)
+                
+                # Pick the pattern whose prefix appears in the user_input
+                prefix = None
+                for pattern in candidates:
+                    candidate_prefix = pattern.replace("*", "").strip()
+                    # Check if this prefix actually appears in the user input
+                    # (distinguishes "search *" from "google *" when both map to web_search)
+                    if user_input.lower().startswith(candidate_prefix.lower()):
+                        prefix = candidate_prefix
                         break
+                
+                if prefix:
+                    wildcard_value = user_input.lower()[len(prefix):].strip()
+                    result[key] = wildcard_value if wildcard_value else user_input
                 else:
                     result[key] = user_input
             elif isinstance(value, str) and "*" in value:
