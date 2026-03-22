@@ -87,8 +87,14 @@ class TTSEngine:
             # Generate audio
             audio_arrays = []
             
-            for grapheme, phoneme, audio in self._pipeline(text, voice=self._voice):
+            for result in self._pipeline(text, voice=self._voice):
+                # kokoro >=1.0 returns Result namedtuple with output.audio tensor
+                audio = result.output.audio
                 if audio is not None:
+                    # Convert tensor to numpy if needed
+                    import torch
+                    if isinstance(audio, torch.Tensor):
+                        audio = audio.cpu().numpy()
                     # Adjust speed by resampling if needed
                     if self._speed != 1.0:
                         audio = self._adjust_speed(audio, self._speed)
@@ -122,10 +128,11 @@ class TTSEngine:
             return audio
         
         # Speed adjustment via librosa resampling
+        # Higher speed = lower target_sr = fewer samples = faster playback
         return librosa.resample(
             audio,
             orig_sr=24000,
-            target_sr=int(24000 * speed)
+            target_sr=int(24000 / speed)
         )
     
     def speak_to_file(self, text: str, output_path: str):
