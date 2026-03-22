@@ -60,7 +60,7 @@ class TTSEngine:
     def _load_pipeline(self):
         """Load the Kokoro pipeline."""
         try:
-            self._pipeline = KPipeline(lang_code=self._language_code)
+            self._pipeline = KPipeline(lang_code=self._language_code, repo_id='hexgrad/Kokoro-82M')
             logger.info(f"TTS pipeline loaded: {KOKORO_TYPE}")
         except Exception as e:
             logger.error(f"Failed to load TTS pipeline: {e}")
