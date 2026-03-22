@@ -4,6 +4,7 @@ Provides speech synthesis using Kokoro
 """
 
 import numpy as np
+import librosa
 from typing import Optional, List
 from loguru import logger
 
@@ -59,10 +60,7 @@ class TTSEngine:
     def _load_pipeline(self):
         """Load the Kokoro pipeline."""
         try:
-            self._pipeline = KPipeline(
-                lang_code=self._language_code,
-                repo_id=None  # Will download default voice
-            )
+            self._pipeline = KPipeline(lang_code=self._language_code)
             logger.info(f"TTS pipeline loaded: {KOKORO_TYPE}")
         except Exception as e:
             logger.error(f"Failed to load TTS pipeline: {e}")
@@ -123,10 +121,12 @@ class TTSEngine:
         if speed == 1.0:
             return audio
         
-        # Simple speed adjustment via resampling
-        new_length = int(len(audio) / speed)
-        indices = np.linspace(0, len(audio) - 1, new_length)
-        return np.interp(indices, np.arange(len(audio)), audio).astype(np.float32)
+        # Speed adjustment via librosa resampling
+        return librosa.resample(
+            audio,
+            orig_sr=24000,
+            target_sr=int(24000 * speed)
+        )
     
     def speak_to_file(self, text: str, output_path: str):
         """
