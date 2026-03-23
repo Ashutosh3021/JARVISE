@@ -36,6 +36,7 @@ google-auth-oauthlib>=1.0.0
 google-auth-httplib2>=0.2.0
 cryptography>=41.0.0
 msgraph-sdk>=1.0.0
+azure-identity>=1.15.0
 duckduckgo-search>=6.0.0
 requests>=2.31.0
 msal>=1.24.0
