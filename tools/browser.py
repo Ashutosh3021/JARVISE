@@ -136,52 +136,6 @@ class BrowserManager:
         
         return content
     
-    def search(self, query: str, num_results: int = 5) -> list[SearchResult]:
-        """Search the web using DuckDuckGo.
-        
-        Args:
-            query: The search query
-            num_results: Number of results to return
-            
-        Returns:
-            List of SearchResult objects
-        """
-        if not self.page:
-            self.launch()
-        
-        # Navigate to DuckDuckGo
-        self.navigate(f"https://duckduckgo.com/?q={query}&ia=web")
-        
-        # Wait for results to load
-        self.page.wait_for_selector(".result__body", timeout=10000)
-        
-        results = []
-        
-        # Extract results
-        result_elements = self.page.locator(".result__body").all()[:num_results]
-        
-        for element in result_elements:
-            try:
-                title_elem = element.locator(".result__title")
-                url_elem = element.locator(".result__url")
-                snippet_elem = element.locator(".result__snippet")
-                
-                title = title_elem.inner_text() if title_elem.count() > 0 else ""
-                url = url_elem.inner_text() if url_elem.count() > 0 else ""
-                snippet = snippet_elem.inner_text() if snippet_elem.count() > 0 else ""
-                
-                results.append(SearchResult(
-                    title=title.strip(),
-                    url=url.strip(),
-                    snippet=snippet.strip()
-                ))
-            except Exception as e:
-                self.logger.warning(f"Failed to extract result: {e}")
-                continue
-        
-        self.logger.info(f"Found {len(results)} search results for query: {query}")
-        return results
-    
     def close(self) -> None:
         """Close the browser and cleanup."""
         try:
@@ -272,36 +226,11 @@ class BrowserTool(BaseTool):
         
         return self.manager.extract(selector)
     
-    def search(self, query: str, num_results: int = 5) -> list[dict[str, str]]:
-        """Search the web and return results.
-        
-        Args:
-            query: Search query
-            num_results: Number of results to return
-            
-        Returns:
-            List of {title, url, snippet} dicts
-        """
-        if not self.manager:
-            self.launch()
-        
-        results = self.manager.search(query, num_results)
-        
-        # Return as dicts for easier serialization
-        return [
-            {
-                "title": r.title,
-                "url": r.url,
-                "snippet": r.snippet
-            }
-            for r in results
-        ]
-    
     def execute(self, action: str, **kwargs: Any) -> Any:
         """Execute a browser action.
         
         Args:
-            action: Action to perform (launch, navigate, extract, search)
+            action: Action to perform (launch, navigate, extract)
             **kwargs: Arguments for the action
             
         Returns:
@@ -311,10 +240,6 @@ class BrowserTool(BaseTool):
             "launch": self.launch,
             "navigate": lambda: self.navigate(kwargs.get("url", "")),
             "extract": lambda: self.extract(kwargs.get("selector")),
-            "search": lambda: self.search(
-                kwargs.get("query", ""),
-                kwargs.get("num_results", 5)
-            ),
         }
         
         if action not in actions:
