@@ -205,12 +205,35 @@ class BrowserTool(BaseTool):
             
         Returns:
             Page title
+            
+        Raises:
+            ToolError: If URL is invalid
         """
+        # URL validation with regex extraction
+        import re
+        url_pattern = re.compile(r'https?://[^\s]+|www\.[^\s]+')
+        match = url_pattern.search(url)
+        
+        if not match:
+            # Check if the input starts with www. and auto-prepend https://
+            if url.strip().lower().startswith('www.'):
+                url = 'https://' + url.strip()
+                match = url_pattern.search(url)
+            else:
+                raise ToolError(
+                    "BrowserTool",
+                    "I need a URL to navigate to. Please provide one.",
+                    "Provide a valid URL starting with http://, https://, or www."
+                )
+        
+        # Extract validated URL
+        validated_url = match.group(0)
+        
         if not self.manager:
             self.launch()
         
-        title = self.manager.navigate(url)
-        return f"Navigated to: {url}\nPage title: {title}"
+        title = self.manager.navigate(validated_url)
+        return f"Navigated to: {validated_url}\nPage title: {title}"
     
     def extract(self, selector: str | None = None) -> str:
         """Extract content from the current page.
