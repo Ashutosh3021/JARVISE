@@ -386,20 +386,34 @@ def create_tools_registry() -> ToolRegistry:
     
     # Register web search tool
     def execute_search(args: dict) -> str:
-        """Execute web search."""
-        global _web_search_tool
-        if _web_search_tool is None:
-            from tools.web_search import WebSearchTool
-            _web_search_tool = WebSearchTool()
+        """Execute web search using duckduckgo-search directly."""
         query = args.get("query", "")
-        max_results = args.get("max_results", 10)
-        # BUG-012 fix: use num_results parameter (not max_results)
-        return _web_search_tool.execute(query=query, num_results=max_results)
+        if not query:
+            return "Error: No search query provided"
+        
+        try:
+            from duckduckgo_search import DDGS
+            
+            with DDGS() as ddgs:
+                results = list(ddgs.text(query, max_results=5, backend='bing'))
+                if results:
+                    output = []
+                    for r in results:
+                        title = r.get('title', 'No title')
+                        url = r.get('href', r.get('url', ''))
+                        body = r.get('body', r.get('snippet', ''))
+                        output.append(f"- {title}: {url}\n  {body[:100]}...")
+                    return "Search Results:\n" + "\n".join(output)
+            return "No search results found."
+        except ImportError as e:
+            return f"Error: duckduckgo-search not installed. Install with: pip install duckduckgo-search"
+        except Exception as e:
+            return f"Search error: {str(e)}"
     
     registry.register(
         "web_search",
         execute_search,
-        "Search the web using browser automation"
+        "Search the web using duckduckgo-search API"
     )
     
     # Register filesystem tool

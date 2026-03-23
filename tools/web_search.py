@@ -1,17 +1,17 @@
 """
 JARVIS Tools - Web Search
 
-Web search tool that uses BrowserTool for search results.
+Web search tool using duckduckgo-search package.
 Per user decision: streaming + async callbacks, full logging, detailed errors.
 """
 
+import re
 from typing import Any, Callable, Awaitable
 from dataclasses import dataclass
 
 from loguru import logger
 
 from tools.base import BaseTool, ToolError, execute_with_error_handling
-from tools.browser import BrowserTool
 
 
 @dataclass
@@ -22,25 +22,42 @@ class WebSearchResult:
     snippet: str
 
 
+def format_search_for_llm(results: list[dict]) -> str:
+    """Format search results as a Markdown table for LLM consumption.
+    
+    Args:
+        results: List of search result dicts
+        
+    Returns:
+        Markdown formatted table string
+    """
+    if not results:
+        return "No search results found."
+    
+    lines = ["| # | Title | URL | Snippet |", "|---|---|---|---|"]
+    for i, r in enumerate(results, 1):
+        title = r.get('title', '') or ''
+        url = r.get('href', r.get('url', '')) or ''
+        snippet = r.get('body', r.get('snippet', '')) or ''
+        lines.append(f"| {i} | {title} | {url} | {snippet} |")
+    
+    return "\n".join(lines)
+
+
 class WebSearchTool(BaseTool):
-    """Web search tool using browser automation.
+    """Web search tool using duckduckgo-search package.
     
     Per user decision:
-    - Highlights "important details" in results
+    - Direct API access (no browser automation)
     - Async support with streaming results callback
     - Full logging to file + console
     - Detailed error handling with suggestions
     """
     
-    def __init__(self, browser: BrowserTool | None = None):
-        """Initialize web search tool.
-        
-        Args:
-            browser: Optional BrowserTool instance to use
-        """
+    def __init__(self):
+        """Initialize web search tool."""
         super().__init__(name="WebSearchTool")
         
-        self.browser = browser
         self._stream_callback: Callable[[WebSearchResult], None] | None = None
     
     def _highlight_important(self, text: str) -> str:
@@ -89,23 +106,20 @@ class WebSearchTool(BaseTool):
         """
         self.logger.info(f"Searching for: {query}")
         
-        # Use existing browser or create new one
-        close_browser = False
-        if self.browser is None:
-            self.browser = BrowserTool()
-            close_browser = True
-        
         try:
-            # Perform search using browser
-            results = self.browser.search(query, num_results)
+            from duckduckgo_search import DDGS
+            
+            # Use context manager for proper cleanup
+            with DDGS() as ddgs:
+                results = list(ddgs.text(query, max_results=num_results, backend='bing'))
             
             # Process results with highlighting
             processed_results = []
             for result in results:
                 processed = {
-                    "title": result["title"],
-                    "url": result["url"],
-                    "snippet": self._highlight_important(result["snippet"])
+                    "title": result.get("title", ""),
+                    "url": result.get("href", result.get("url", "")),
+                    "snippet": self._highlight_important(result.get("body", result.get("snippet", "")))
                 }
                 processed_results.append(processed)
                 
@@ -116,9 +130,18 @@ class WebSearchTool(BaseTool):
             self.logger.info(f"Found {len(processed_results)} results for: {query}")
             return processed_results
             
-        finally:
-            if close_browser and self.browser:
-                self.browser.close()
+        except ImportError as e:
+            raise ToolError(
+                "WebSearchTool",
+                "duckduckgo-search not installed",
+                "Install with: pip install duckduckgo-search"
+            ) from e
+        except Exception as e:
+            raise ToolError(
+                "WebSearchTool",
+                f"Search failed: {str(e)}",
+                "Check your internet connection"
+            ) from e
     
     async def search_async(
         self,
@@ -165,4 +188,4 @@ class WebSearchTool(BaseTool):
         return f"<WebSearchTool>"
 
 
-__all__ = ["WebSearchTool", "WebSearchResult"]
+__all__ = ["WebSearchTool", "WebSearchResult", "format_search_for_llm"]
