@@ -363,6 +363,8 @@ def create_tools_registry() -> ToolRegistry:
     Returns:
         ToolRegistry with all tools registered
     """
+    import os
+    
     registry = ToolRegistry()
     
     # === HEAVY TOOLS (lazy-initialized) ===
@@ -434,21 +436,42 @@ def create_tools_registry() -> ToolRegistry:
         "Read, write, delete files. Requires user confirmation."
     )
     
-    # Register code execution tool
-    def execute_code(args: dict) -> str:
-        """Execute Python code."""
-        global _code_exec
-        if _code_exec is None:
-            from tools.code_exec import CodeExecutionTool
-            _code_exec = CodeExecutionTool()
-        code = args.get("code", "")
-        return _code_exec.execute(code=code)
+    # Register code execution tool ONLY if explicitly enabled
+    _code_exec_enabled = os.getenv("ENABLE_CODE_EXEC", "false").lower() == "true"
     
-    registry.register(
-        "execute_code",
-        execute_code,
-        "Run Python code in sandboxed environment"
-    )
+    if _code_exec_enabled:
+        def execute_code(args: dict) -> str:
+            """Execute Python code."""
+            global _code_exec
+            if _code_exec is None:
+                from tools.code_exec import CodeExecutionTool
+                _code_exec = CodeExecutionTool()
+            code = args.get("code", "")
+            # Add confirmation prompt requirement
+            confirm = args.get("confirm", False)
+            if not confirm:
+                return "Error: Code execution requires confirmation. Add 'confirm': true to args."
+            result = _code_exec.execute(code=code)
+            # Format result as string for tool output
+            if result.get("status") == "error":
+                return f"Error: {result.get('error', 'Unknown error')}"
+            return result.get("output", "")
+        
+        registry.register(
+            "execute_code",
+            execute_code,
+            "Run Python code in sandboxed environment (requires ENABLE_CODE_EXEC=true in .env)"
+        )
+    else:
+        # Register a stub that explains it's disabled
+        def execute_code_disabled(args: dict) -> str:
+            return "Error: Code execution is disabled. Set ENABLE_CODE_EXEC=true in .env to enable."
+        
+        registry.register(
+            "execute_code",
+            execute_code_disabled,
+            "Code execution disabled - requires ENABLE_CODE_EXEC=true in .env"
+        )
     
     # Register Google Calendar tool
     def execute_calendar(args: dict) -> str:
