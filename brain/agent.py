@@ -30,17 +30,27 @@ class ReActAgent:
         self.prompt_builder = prompt_builder or PromptBuilder()
         self.max_iterations = max_iterations
 
-    def run(self, user_input: str, stream_callback: Callable[[str], None] | None = None) -> str:
+    def run(
+        self,
+        user_input: str,
+        memory_context: str | None = None,
+        stream_callback: Callable[[str], None] | None = None
+    ) -> str:
         """
         Run the ReAct agent on user input.
         
         Args:
             user_input: The user's input text
+            memory_context: Optional memory context to prepend to the prompt
             stream_callback: Optional callback for streaming responses
             
         Returns:
             Final response from the agent
         """
+        # Prepend memory context to user input if provided
+        if memory_context:
+            user_input = f"{memory_context}\n\nCurrent query: {user_input}"
+        
         messages = self.prompt_builder.build(
             user_input={"role": "user", "content": user_input}
         )
