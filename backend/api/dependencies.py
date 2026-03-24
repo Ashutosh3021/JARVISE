@@ -36,8 +36,15 @@ async def verify_api_key(
       This allows local UI access without credentials while still protecting remote access.
       For production, set API_KEY and ensure UI_HOST=127.0.0.1 (default).
     """
-    # If no API key configured, allow all (dev mode)
+    # If no API key configured → only allow localhost connections
     if not config.api_key:
+        client_host = request.client.host if request.client else ""
+        localhost_ips = {"127.0.0.1", "::1", "localhost"}
+        if client_host not in localhost_ips and not client_host.startswith("127."):
+            raise HTTPException(
+                status_code=403,
+                detail="Local only - no API key configured. Set API_KEY in .env for remote access."
+            )
         return True
     
     # Check if request is from localhost
