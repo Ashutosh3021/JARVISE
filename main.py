@@ -215,6 +215,9 @@ def run_jarvis(args):
                 """Process transcribed speech through router or agent, then speak response."""
                 logger.info(f"Voice input: '{text}' (confidence: {confidence:.2f})")
                 try:
+                    # Get memory context BEFORE agent.run() - per requirement memory loaded before streaming
+                    memory_context = memory_manager.format_context_for_prompt(text) if memory_manager else None
+                    
                     if router:
                         route_result = router.route(text)
                         if route_result.route_type == RouteType.DIRECT_TOOL:
@@ -222,9 +225,14 @@ def run_jarvis(args):
                         elif route_result.route_type == RouteType.CHAIN:
                             response = router.execute_chain(route_result, text)
                         else:
-                            response = agent.run(text)
+                            response = agent.run(text, memory_context=memory_context)
                     else:
-                        response = agent.run(text)
+                        response = agent.run(text, memory_context=memory_context)
+                    
+                    # Auto-save every exchange to memory after response
+                    if memory_manager:
+                        memory_manager.save_conversation(text, response)
+                    
                     voice_pipeline.speak_async(response)
                 except Exception as e:
                     logger.error(f"Error processing voice input: {e}")
