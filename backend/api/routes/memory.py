@@ -46,7 +46,12 @@ class MemoryFileUpdate(BaseModel):
 
 
 @router.get("/memory")
-async def list_memories(session_id: str = "default", limit: int = 50, manager: MemoryManager = Depends(get_memory_manager)) -> dict[str, Any]:
+async def list_memories(
+    session_id: str = "default",
+    limit: int = 50,
+    manager: MemoryManager = Depends(get_memory_manager),
+    _: bool = Depends(verify_api_key)
+) -> dict[str, Any]:
     """
     List memories from the vector store.
     
@@ -71,7 +76,11 @@ async def list_memories(session_id: str = "default", limit: int = 50, manager: M
 
 
 @router.get("/memory/{memory_id}")
-async def get_memory_by_id(memory_id: str, manager: MemoryManager = Depends(get_memory_manager)) -> dict[str, Any]:
+async def get_memory_by_id(
+    memory_id: str,
+    manager: MemoryManager = Depends(get_memory_manager),
+    _: bool = Depends(verify_api_key)
+) -> dict[str, Any]:
     """
     Get a specific memory by ID.
     
@@ -156,7 +165,10 @@ async def delete_memory(memory_id: str, manager: MemoryManager = Depends(get_mem
 
 
 @router.get("/memory.md")
-async def get_memory_file(manager: MemoryManager = Depends(get_memory_manager)) -> dict[str, Any]:
+async def get_memory_file(
+    manager: MemoryManager = Depends(get_memory_manager),
+    _: bool = Depends(verify_api_key)
+) -> dict[str, Any]:
     """
     Get the content of MEMORY.md file.
     
@@ -331,7 +343,8 @@ async def search_memory(
     project: str | None = None,
     min_importance: float = 0.0,
     limit: int = 10,
-    filtered_memory: FilteredMemory = Depends(get_filtered_memory)
+    filtered_memory: FilteredMemory = Depends(get_filtered_memory),
+    _: bool = Depends(verify_api_key)
 ) -> dict[str, Any]:
     """
     Search memory with filters.
@@ -381,7 +394,11 @@ async def search_memory(
 
 
 @router.get("/memory/recent")
-async def get_recent_memory(limit: int = 10, filtered_memory: FilteredMemory = Depends(get_filtered_memory)) -> dict[str, Any]:
+async def get_recent_memory(
+    limit: int = 10,
+    filtered_memory: FilteredMemory = Depends(get_filtered_memory),
+    _: bool = Depends(verify_api_key)
+) -> dict[str, Any]:
     """
     Get recent memory entries.
     
