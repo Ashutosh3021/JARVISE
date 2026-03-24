@@ -263,6 +263,9 @@ def run_jarvis(args):
                 # Process through router or agent
                 logger.info(f"Processing: {user_input}")
                 
+                # Get memory context BEFORE agent.run() - per requirement memory loaded before streaming
+                memory_context = memory_manager.format_context_for_prompt(user_input) if memory_manager else None
+                
                 if router:
                     # Use smart routing
                     route_result = router.route(user_input)
@@ -273,17 +276,21 @@ def run_jarvis(args):
                         response = router.execute_direct(route_result)
                     elif route_result.route_type == RouteType.LLM_AGENT:
                         # Explicitly requested LLM
-                        response = agent.run(user_input)
+                        response = agent.run(user_input, memory_context=memory_context)
                     else:
                         # Unknown - default to LLM (safer)
                         logger.info("Unknown command, routing to LLM")
-                        response = agent.run(user_input)
+                        response = agent.run(user_input, memory_context=memory_context)
                         router._stats.llm_agent_calls += 1
                 else:
                     # Router disabled, use LLM
-                    response = agent.run(user_input)
+                    response = agent.run(user_input, memory_context=memory_context)
                 
                 print(f"\nJARVIS: {response}")
+                
+                # Auto-save every exchange to memory after response
+                if memory_manager:
+                    memory_manager.save_conversation(user_input, response)
                 
             except KeyboardInterrupt:
                 break
