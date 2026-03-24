@@ -28,8 +28,9 @@ class ChainStatus(Enum):
 class ChainStep:
     """Represents a single step in a task chain."""
     step_number: int
-    action: str  # Tool name or LLM request
-    input: str  # From previous step or user
+    tool: str  # Tool name (e.g., "web_search", "browser", "filesystem")
+    action: str  # Action type (e.g., "search", "extract", "save")
+    input: str = ""  # From previous step or user
     output: str | None = None
     status: ChainStatus = ChainStatus.PENDING
     error: str | None = None
@@ -53,6 +54,7 @@ class ChainResult:
             "steps": [
                 {
                     "step_number": s.step_number,
+                    "tool": s.tool,
                     "action": s.action,
                     "input": s.input,
                     "output": s.output,
@@ -84,22 +86,22 @@ class TaskChain:
     # Built-in chain templates
     BUILTIN_TEMPLATES = {
         "research_and_summarize": [
-            {"action": "web_search", "input": "{query}"},
-            {"action": "browser", "action_type": "extract_content"},
-            {"action": "llm_summarize", "input": "{content}"},
-            {"action": "filesystem", "action": "save", "content": "{summary}"},
+            {"tool": "web_search", "action": "search", "query": "{query}"},
+            {"tool": "browser", "action": "extract", "url": "{previous_output}"},
+            {"tool": "llm_summarize", "action": "summarize", "content": "{previous_output}"},
+            {"tool": "filesystem", "action": "save", "content": "{previous_output}"},
         ],
         "code_review": [
-            {"action": "filesystem", "action": "list_files"},
-            {"action": "filesystem", "action": "read_code"},
-            {"action": "llm_review", "input": "{code}"},
-            {"action": "filesystem", "action": "create_review_file"},
+            {"tool": "filesystem", "action": "list_files", "path": "{input}"},
+            {"tool": "filesystem", "action": "read_code", "files": "{previous_output}"},
+            {"tool": "llm_review", "action": "review", "code": "{previous_output}"},
+            {"tool": "filesystem", "action": "create_review_file", "content": "{previous_output}"},
         ],
         "find_and_replace": [
-            {"action": "filesystem", "action": "search_files"},
-            {"action": "filesystem", "action": "read_files"},
-            {"action": "llm_replace", "input": "{content}"},
-            {"action": "filesystem", "action": "save_files"},
+            {"tool": "filesystem", "action": "search_files", "pattern": "{input}"},
+            {"tool": "filesystem", "action": "read_files", "files": "{previous_output}"},
+            {"tool": "llm_replace", "action": "replace", "content": "{previous_output}"},
+            {"tool": "filesystem", "action": "save_files", "content": "{previous_output}"},
         ],
     }
     
@@ -214,6 +216,7 @@ Example response format:
             for i, step_data in enumerate(steps_data):
                 chain_steps.append(ChainStep(
                     step_number=i + 1,
+                    tool=step_data.get("tool", step_data.get("action", "")),
                     action=step_data.get("action", ""),
                     input=step_data.get("input", ""),
                 ))
@@ -225,7 +228,8 @@ Example response format:
             # Fallback: create a simple single-step chain
             return [ChainStep(
                 step_number=1,
-                action="llm_process",
+                tool="llm",
+                action="process",
                 input=user_input,
             )]
     
@@ -266,10 +270,11 @@ Example response format:
         
         # Convert dict steps to ChainStep objects
         chain_steps: list[ChainStep]
-        if isinstance(steps[0], dict):
+        if steps and isinstance(steps[0], dict):
             chain_steps = [
                 ChainStep(
                     step_number=i + 1,
+                    tool=step.get("tool", step.get("action", "")),
                     action=step.get("action", ""),
                     input=step.get("input", ""),
                 )
@@ -288,16 +293,16 @@ Example response format:
                 final_output=f"Error: Chain exceeds maximum of {self.MAX_STEPS} steps",
             )
         
-        # Validate that each action exists in the tool registry
+        # Validate that each tool exists in the tool registry
         if hasattr(self.tool_registry, 'tools'):
             for step in chain_steps:
-                if step.action not in self.tool_registry.tools:
+                if step.tool not in self.tool_registry.tools:
                     return ChainResult(
                         chain_id=chain_id,
                         steps=chain_steps,
                         status=ChainStatus.FAILED,
                         total_duration_ms=0,
-                        final_output=f"Error: Tool '{step.action}' not found in registry. Available: {list(self.tool_registry.tools.keys())}",
+                        final_output=f"Error: Tool '{step.tool}' not found in registry. Available: {list(self.tool_registry.tools.keys())}",
                     )
         
         # Use callback
@@ -333,13 +338,24 @@ Example response format:
                     step_args = {}
                     if step.input:
                         step_args["input"] = step.input
+                    
                     # Add any additional args from the step dict if available
-                    if isinstance(steps[0], dict) and i < len(steps):
+                    if steps and isinstance(steps[0], dict) and i < len(steps):
                         for k, v in steps[i].items():
-                            if k not in ("action", "input"):
+                            if k not in ("tool", "action", "input"):
                                 step_args[k] = v
                     
-                    result = self.tool_registry.execute(step.action, step_args)
+                    # Substitute {previous_output} before execution
+                    for key in ("input", "query", "url", "content"):
+                        if key in step_args and isinstance(step_args[key], str):
+                            step_args[key] = step_args[key].replace("{previous_output}", previous_output)
+                    
+                    # Also substitute in input field
+                    if "input" in step_args and isinstance(step_args["input"], str):
+                        step_args["input"] = step_args["input"].replace("{previous_output}", previous_output)
+                    
+                    # Execute using tool field instead of action
+                    result = self.tool_registry.execute(step.tool, step_args)
                     step.output = str(result)
                 else:
                     step.output = f"Tool registry not available"
