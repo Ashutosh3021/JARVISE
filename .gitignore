@@ -1,6 +1,8 @@
-# Environment
+# Environment - NEVER commit these
 .env
 .env.local
+.env.*
+!.env.example
 
 # Python
 __pycache__/
@@ -35,11 +37,11 @@ env/
 *.swp
 *.swo
 
-# Data and models
-data/chromadb/
-data/*.db
-data/*.log
-data/tokens/
+# Data folders - ignore completely
+data/
+creds/
+
+# Models (downloadable)
 models/
 *.bin
 *.onnx
@@ -58,10 +60,8 @@ ui\node_modules
 ui\dist
 dist
 .planning
-creds\Google.json
 ui\package-lock.json
 jarvis.log
 package-lock.json
 package.json
 Google.json
-data/browser
