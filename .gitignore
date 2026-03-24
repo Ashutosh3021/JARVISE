@@ -3,6 +3,7 @@
 .env.local
 .env.*
 !.env.example
+*.token
 
 # Python
 __pycache__/
