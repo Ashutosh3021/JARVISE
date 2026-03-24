@@ -22,7 +22,11 @@ router = APIRouter()
 
 
 @router.websocket("/ws/chat")
-async def websocket_chat(websocket: WebSocket, agent: ReActAgent = Depends(get_agent)):
+async def websocket_chat(
+    websocket: WebSocket,
+    api_key: str | None = None,
+    agent: ReActAgent = Depends(get_agent)
+):
     """
     WebSocket endpoint for chat with live token streaming.
     
@@ -35,7 +39,31 @@ async def websocket_chat(websocket: WebSocket, agent: ReActAgent = Depends(get_a
     Response format:
         {"type": "token", "content": "token text", "is_final": false}
         {"type": "done"}  # When complete
+    
+    Authentication:
+        - If API_KEY not set in config → only localhost connections allowed
+        - If API_KEY set → require valid ?api_key=... query param or reject
     """
+    # Auth check - import here to avoid circular deps
+    from core.config import Config
+    config = Config()
+    
+    # Check if request is from localhost
+    client_host = websocket.client.host if websocket.client else ""
+    localhost_ips = {"127.0.0.1", "::1", "localhost"}
+    is_localhost = client_host in localhost_ips or client_host.startswith("127.")
+    
+    if not config.api_key:
+        # No API key configured → local-only mode
+        if not is_localhost:
+            await websocket.close(code=4003, reason="Local only - no API key configured. Set API_KEY in .env for remote access.")
+            return
+    else:
+        # API key configured → require valid key
+        if not is_localhost and api_key != config.api_key:
+            await websocket.close(code=4003, reason="Invalid API key")
+            return
+    
     await manager.connect(websocket)
     
     try:
