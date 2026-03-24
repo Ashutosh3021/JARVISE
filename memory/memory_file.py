@@ -234,8 +234,10 @@ class MemoryFileController:
         """
         current_content = self.get_section("Preferences")
         
-        # Find the key - match format: - **Key:** value
-        pattern = re.compile(rf"^\s*-\s*\*{re.escape(key)}\*\*:\s*(.+)$", re.MULTILINE)
+        # Find the key - match format: - **Key:** value (colon BEFORE **)
+        # Use literal ** in pattern (escaped for f-string)
+        escaped_key = key.replace('*', r'\*')
+        pattern = re.compile(rf"^\s*-\s+\*\*{escaped_key}:\*\*\s+(.+)$", re.MULTILINE)
         match = pattern.search(current_content)
         
         if match:
@@ -311,7 +313,8 @@ class MemoryFileController:
         profile = {}
         
         # Parse key-value pairs
-        pattern = re.compile(r"^\s*-\s*\*\*([^\*]+)\*\*:\s*(.+)$", re.MULTILINE)
+        # Format: - **Key:** value  (colon BEFORE closing **)
+        pattern = re.compile(r"^\s*-\s*\*\*([^\*]+):\*\*\s*(.+)$", re.MULTILINE)
         for match in pattern.finditer(profile_content):
             key = match.group(1).strip()
             value = match.group(2).strip()
