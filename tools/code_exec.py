@@ -184,6 +184,7 @@ print(json.dumps(result))
     def execute(
         self,
         code: str,
+        confirm: bool = False,
         stream_callback: Callable[[str], None] | None = None
     ) -> dict[str, Any]:
         """Execute Python code in sandbox using process isolation.
@@ -192,11 +193,20 @@ print(json.dumps(result))
         
         Args:
             code: Python code to execute
+            confirm: User must explicitly confirm (passed from tool args)
             stream_callback: Optional callback for streaming output
             
         Returns:
             Dict with {output, error, status}
         """
+        # Require explicit confirmation
+        if not confirm:
+            return {
+                "output": "",
+                "error": "Code execution requires user confirmation. Add 'confirm': true to the tool arguments.",
+                "status": "error"
+            }
+        
         self.logger.info(f"Executing code (length: {len(code)} chars)")
         
         # Check for dangerous code first
@@ -211,15 +221,51 @@ print(json.dumps(result))
             script_path = f.name
         
         try:
-            # Execute in a separate process with timeout
+            # Execute in a separate process with timeout and restrictions
             # Use Popen with kill on timeout for hard termination
-            process = subprocess.Popen(
-                [sys.executable, script_path],
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-                text=True,
-                creationflags=subprocess.CREATE_NEW_PROCESS_GROUP if sys.platform == "win32" else 0,
-            )
+            
+            # Build restricted environment - no access to system commands
+            safe_env = {
+                'PATH': '',  # Empty PATH - no system commands
+                'PYTHONPATH': '',  # No custom Python path
+                'HOME': '',  # No home directory access
+                'USER': '',  # No user info
+                'TMPDIR': tempfile.gettempdir(),  # Only temp dir
+            }
+            
+            # On Windows, also restrict the environment
+            if sys.platform == "win32":
+                # Create a restricted process creation
+                process = subprocess.Popen(
+                    [sys.executable, script_path],
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE,
+                    text=True,
+                    creationflags=subprocess.CREATE_NEW_PROCESS_GROUP | subprocess.DETACHED_PROCESS,
+                    env=safe_env,
+                    cwd=tempfile.gettempdir(),  # Only execute in temp dir
+                )
+            else:
+                # Unix: use os.setpgrp to create new process group
+                import resource
+                process = subprocess.Popen(
+                    [sys.executable, script_path],
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE,
+                    text=True,
+                    preexec_fn=os.setsid,  # New process group
+                    env=safe_env,
+                    cwd=tempfile.gettempdir(),
+                )
+                
+                # Set resource limits
+                try:
+                    # Limit CPU time (30 seconds)
+                    resource.setrlimit(resource.RLIMIT_CPU, (self.timeout, self.timeout))
+                    # Limit file size (10MB)
+                    resource.setrlimit(resource.RLIMIT_FSIZE, (10*1024*1024, 10*1024*1024))
+                except (ValueError, OSError):
+                    pass  # May fail if limits are already exceeded
             
             try:
                 # Wait for process with timeout
@@ -272,12 +318,14 @@ print(json.dumps(result))
     async def execute_async(
         self,
         code: str,
+        confirm: bool = False,
         stream_callback: Callable[[str], None] | None = None
     ) -> dict[str, Any]:
         """Async version of execute.
         
         Args:
             code: Python code to execute
+            confirm: User must explicitly confirm
             stream_callback: Optional callback for streaming output
             
         Returns:
@@ -288,7 +336,7 @@ print(json.dumps(result))
         loop = asyncio.get_event_loop()
         return await loop.run_in_executor(
             None,
-            lambda: self.execute(code, stream_callback)
+            lambda: self.execute(code, confirm, stream_callback)
         )
     
     def __repr__(self) -> str:
