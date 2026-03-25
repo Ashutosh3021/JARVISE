@@ -464,7 +464,7 @@ class SystemMonitorTool(BaseTool):
         callback = callback or self._log
         
         def run_in_executor(func, *args):
-            loop = asyncio.get_event_loop()
+            loop = asyncio.get_running_loop()
             return loop.run_in_executor(None, func, *args)
         
         # Run all stats gathering concurrently

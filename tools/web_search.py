@@ -137,7 +137,7 @@ class WebSearchTool(BaseTool):
         def sync_search():
             return self.search(query, num_results)
         
-        loop = asyncio.get_event_loop()
+        loop = asyncio.get_running_loop()
         return await loop.run_in_executor(None, sync_search)
     
     def execute(self, query: str, num_results: int = 5, **kwargs: Any) -> list[dict[str, str]]:

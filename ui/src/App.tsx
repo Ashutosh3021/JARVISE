@@ -33,7 +33,7 @@ function App() {
     isThinking, 
     sendMessage, 
     connectionStatus 
-  } = useChatWebSocket('ws://localhost:8000/ws/chat')
+  } = useChatWebSocket(`ws://${window.location.host}/ws/chat`)
 
   const navItems: { icon: typeof MessageSquare; label: string; page: Page }[] = [
     { icon: MessageSquare, label: 'Chat', page: 'chat' },
