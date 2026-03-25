@@ -1,13 +1,15 @@
 """
 Chat WebSocket Route
 
-Provides WebSocket endpoint for live token streaming from the agent.
+Provides WebSocket endpoint for live token streaming from the agent
+and REST endpoint for synchronous chat.
 """
 
 import asyncio
 import json
 
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect, Depends
+from pydantic import BaseModel
 
 from loguru import logger
 
@@ -18,7 +20,37 @@ from backend.api.dependencies import get_agent
 from brain.agent import ReActAgent
 
 
+class ChatRequest(BaseModel):
+    """Request model for REST chat endpoint."""
+    message: str
+
+
+class ChatResponse(BaseModel):
+    """Response model for REST chat endpoint."""
+    response: str
+
+
 router = APIRouter()
+
+
+@router.post("/api/chat", response_model=ChatResponse)
+async def rest_chat(
+    request: ChatRequest,
+    agent: ReActAgent = Depends(get_agent)
+):
+    """
+    REST endpoint for chat (non-streaming).
+    
+    Accepts a JSON body with a "message" field and returns the agent's response.
+    
+    Used as HTTP fallback when WebSocket is unavailable.
+    """
+    if not request.message:
+        return ChatResponse(response="No message provided")
+    
+    # Run agent synchronously and return response
+    response = agent.run(request.message)
+    return ChatResponse(response=response)
 
 
 @router.websocket("/ws/chat")
