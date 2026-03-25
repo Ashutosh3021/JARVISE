@@ -83,12 +83,8 @@ def create_app() -> FastAPI:
     app.include_router(learn.router, prefix="/api", tags=["learn"])
     app.include_router(chains.router, prefix="/api", tags=["chains"])
     
-    # Serve UI static files
-    ui_path = Path(__file__).parent.parent / "ui" / "dist"
-    if ui_path.exists():
-        app.mount("/", StaticFiles(directory=str(ui_path), html=True), name="ui")
-        logger.info(f"Serving UI from: {ui_path}")
-    
+    # Define JSON endpoints BEFORE StaticFiles mount
+    # This ensures root and health endpoints work correctly
     @app.get("/")
     async def root():
         """Root endpoint returning server status."""
@@ -102,6 +98,13 @@ def create_app() -> FastAPI:
     async def health():
         """Health check endpoint."""
         return {"status": "healthy"}
+    
+    # Serve UI static files - mounted AFTER JSON endpoints
+    # This ensures JSON endpoints are registered first and take precedence
+    ui_path = Path(__file__).parent.parent / "ui" / "dist"
+    if ui_path.exists():
+        app.mount("/", StaticFiles(directory=str(ui_path), html=True), name="ui")
+        logger.info(f"Serving UI from: {ui_path}")
     
     return app
 
