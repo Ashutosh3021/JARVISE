@@ -310,7 +310,12 @@ Plans:
   1. No hardcoded localhost:8000 in CLI/UI/NPM client
   2. HTTP fallback removed or implemented
   3. Code quality issues fixed (dead code, deprecated patterns)
-**Plans:** TBD
+**Plans:** 3/3 plans complete
+
+Plans:
+- [x] B-5-01-PLAN.md — URL Config + HTTP Fallback + StaticFiles Routing
+- [x] B-5-02-PLAN.md — Dead Code Removal + __del__ Cleanup
+- [x] B-5-03-PLAN.md — Async Pattern Fixes
 
 ---
 
@@ -333,8 +338,8 @@ Plans:
 | B-2. Voice Pipeline | 3/3 | Complete    | 2026-03-22 |
 | B-3. Web + Memory | 3/3 | Complete    | 2026-03-24 |
 | B-4. Security Hardening | 3/3 | Complete    | 2026-03-24 |
-| B-5. Polish + Routing | 0/0 | Pending     | —          |
+| B-5. Polish + Routing | 3/3 | Complete    | 2026-03-25 |
 
 ---
 
-*Last updated: 2026-03-23 (Phase B-3 planned)*
+*Last updated: 2026-03-25 (Phase B-5 planned)*

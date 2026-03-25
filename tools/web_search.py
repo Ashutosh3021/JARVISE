@@ -60,34 +60,6 @@ class WebSearchTool(BaseTool):
         
         self._stream_callback: Callable[[WebSearchResult], None] | None = None
     
-    def _highlight_important(self, text: str) -> str:
-        """Highlight important details in text.
-        
-        Per user decision: highlight "important details" in results.
-        
-        Args:
-            text: Text to highlight
-            
-        Returns:
-            Text with important parts highlighted
-        """
-        # Simple heuristics for important information
-        important_patterns = [
-            # URLs
-            r'https?://[^\s]+',
-            # Numbers with units (prices, dates, versions)
-            r'\$[\d,]+(?:\.\d{2})?',
-            r'\d+(?:\.\d+)?\s*(?:GB|MB|KB|seconds?|minutes?|hours?|days?)',
-            # Version numbers
-            r'v?\d+\.\d+(?:\.\d+)?',
-            # Email addresses
-            r'[\w.-]+@[\w.-]+\.\w+',
-        ]
-        
-        # For now, return the text as-is
-        # The highlighting can be enhanced based on user feedback
-        return text
-    
     def search(
         self,
         query: str,
@@ -113,13 +85,13 @@ class WebSearchTool(BaseTool):
             with DDGS() as ddgs:
                 results = list(ddgs.text(query, max_results=num_results, backend='bing'))
             
-            # Process results with highlighting
+            # Process results
             processed_results = []
             for result in results:
                 processed = {
                     "title": result.get("title", ""),
                     "url": result.get("href", result.get("url", "")),
-                    "snippet": self._highlight_important(result.get("body", result.get("snippet", "")))
+                    "snippet": result.get("body", result.get("snippet", ""))
                 }
                 processed_results.append(processed)
                 
