@@ -13,9 +13,24 @@ import websockets
 class JarvisClient:
     """Client for interacting with JARVIS backend API"""
     
-    def __init__(self, base_url: str = "http://localhost:8000"):
-        self.base_url = base_url.rstrip("/")
-        self.ws_url = f"ws://localhost:8000/ws/chat"
+    def __init__(self, base_url: Optional[str] = None):
+        # Try to load config for host/port, fallback to defaults
+        try:
+            from core.config import Config
+            config = Config()
+            self.ui_host = config.ui_host
+            self.ui_port = config.ui_port
+        except Exception:
+            self.ui_host = "127.0.0.1"
+            self.ui_port = 8000
+        
+        # Use provided base_url or config-based URL
+        if base_url:
+            self.base_url = base_url.rstrip("/")
+        else:
+            self.base_url = f"http://{self.ui_host}:{self.ui_port}"
+        
+        self.ws_url = f"ws://{self.ui_host}:{self.ui_port}/ws/chat"
         self._session: Optional[aiohttp.ClientSession] = None
     
     async def _get_session(self) -> aiohttp.ClientSession:
@@ -78,7 +93,7 @@ class JarvisClient:
         session = await self._get_session()
         
         async with session.post(
-            f"{self.base_url}/ws/chat",
+            f"{self.base_url}/api/chat",
             json={"message": message}
         ) as resp:
             if resp.status != 200:
