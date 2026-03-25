@@ -338,7 +338,7 @@ Plans:
 | B-2. Voice Pipeline | 3/3 | Complete    | 2026-03-22 |
 | B-3. Web + Memory | 3/3 | Complete    | 2026-03-24 |
 | B-4. Security Hardening | 3/3 | Complete    | 2026-03-24 |
-| B-5. Polish + Routing | 3/3 | Complete   | 2026-03-25 |
+| B-5. Polish + Routing | 3/3 | Complete    | 2026-03-25 |
 
 ---
 
