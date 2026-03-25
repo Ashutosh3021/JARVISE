@@ -437,7 +437,13 @@ Example response format:
         Returns:
             ChainResult with execution details
         """
-        return asyncio.run(self.execute_chain_async(steps, progress_callback))
+        # Use explicit event loop instead of asyncio.run() for better control
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        try:
+            return loop.run_until_complete(self.execute_chain_async(steps, progress_callback))
+        finally:
+            loop.close()
     
     def _add_to_history(self, result: ChainResult) -> None:
         """Add result to chain history."""

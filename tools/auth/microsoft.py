@@ -265,7 +265,7 @@ class MicrosoftAuth:
         self._credential = None
         self._client = None
     
-    def get_user_info(self) -> Optional[dict]:
+    async def get_user_info(self) -> Optional[dict]:
         """Get current user information from Microsoft Graph.
         
         Returns:
@@ -277,13 +277,7 @@ class MicrosoftAuth:
                 return None
             
             # Call Microsoft Graph /me endpoint
-            # Note: This is async in the SDK
-            import asyncio
-            
-            async def get_user():
-                return await client.me.get()
-            
-            user = asyncio.run(get_user())
+            user = await client.me.get()
             
             if user:
                 return {

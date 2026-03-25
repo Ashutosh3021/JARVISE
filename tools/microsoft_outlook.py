@@ -148,8 +148,8 @@ class MicrosoftOutlookTool(BaseTool):
         if result:
             self._log("Microsoft authentication successful!")
             
-            # Try to get user info
-            user_info = self.auth.get_user_info()
+            # Try to get user info (now async)
+            user_info = asyncio.run(self.auth.get_user_info())
             if user_info:
                 self._log(f"Authenticated as: {user_info.get('display_name', user_info.get('email', 'Unknown'))}")
         
@@ -193,7 +193,7 @@ class MicrosoftOutlookTool(BaseTool):
             online_meeting_url=event.online_meeting_url,
         )
     
-    def list_emails(
+    async def list_emails(
         self,
         max_results: int = 10,
         folder: str = "inbox",
@@ -228,30 +228,25 @@ class MicrosoftOutlookTool(BaseTool):
                 query_params["filter"] = "isRead eq false"
             
             # Get messages (async)
-            async def get_messages():
-                # For inbox, use me/messages; for other folders, use folder path
-                if folder.lower() == "inbox":
-                    result = await client.me.messages.get(**{"query_parameters": query_params})
-                else:
-                    # Try to get folder ID first
-                    folders = await client.me.mail_folders.get()
-                    target_folder = None
-                    if folders and folders.value:
-                        for f in folders.value:
-                            if f.display_name.lower() == folder.lower():
-                                target_folder = f
-                                break
-                    
-                    if target_folder:
-                        result = await client.me.mail_folders.by_mail_folder_id(target_folder.id).messages.get(
-                            **{"query_parameters": query_params}
-                        )
-                    else:
-                        result = await client.me.messages.get(**{"query_parameters": query_params})
+            # For inbox, use me/messages; for other folders, use folder path
+            if folder.lower() == "inbox":
+                result = await client.me.messages.get(**{"query_parameters": query_params})
+            else:
+                # Try to get folder ID first
+                folders = await client.me.mail_folders.get()
+                target_folder = None
+                if folders and folders.value:
+                    for f in folders.value:
+                        if f.display_name.lower() == folder.lower():
+                            target_folder = f
+                            break
                 
-                return result
-            
-            result = asyncio.run(get_messages())
+                if target_folder:
+                    result = await client.me.mail_folders.by_mail_folder_id(target_folder.id).messages.get(
+                        **{"query_parameters": query_params}
+                    )
+                else:
+                    result = await client.me.messages.get(**{"query_parameters": query_params})
             
             emails = []
             if result and result.value:
@@ -278,7 +273,7 @@ class MicrosoftOutlookTool(BaseTool):
                 suggestion
             )
     
-    def get_email(self, email_id: str) -> EmailMessage:
+    async def get_email(self, email_id: str) -> EmailMessage:
         """Get a specific email by ID.
         
         Args:
@@ -295,10 +290,7 @@ class MicrosoftOutlookTool(BaseTool):
         try:
             client = self.auth.get_client()
             
-            async def get_message():
-                return await client.me.messages.by_message_id(email_id).get()
-            
-            msg = asyncio.run(get_message())
+            msg = await client.me.messages.by_message_id(email_id).get()
             
             if not msg:
                 raise ToolError(
@@ -318,7 +310,7 @@ class MicrosoftOutlookTool(BaseTool):
                 "Verify email ID is correct"
             )
     
-    def send_email(
+    async def send_email(
         self,
         to: str | list[str],
         subject: str,
@@ -372,10 +364,7 @@ class MicrosoftOutlookTool(BaseTool):
                 cc_recipients=parse_recipients(cc_list) if cc_list else None,
             )
             
-            async def send_message():
-                await client.me.send_mail.post(message)
-            
-            asyncio.run(send_message())
+            await client.me.send_mail.post(message)
             
             self._log(f"Email sent successfully!")
             return {
@@ -391,7 +380,7 @@ class MicrosoftOutlookTool(BaseTool):
                 "Verify recipient email addresses are valid"
             )
     
-    def list_calendar_events(
+    async def list_calendar_events(
         self,
         max_results: int = 10,
         start_date: Optional[str] = None,
@@ -426,10 +415,7 @@ class MicrosoftOutlookTool(BaseTool):
             if start_date and end_date:
                 query_params["filter"] = f"start/dateTime ge '{start_date}T00:00:00Z' and end/dateTime le '{end_date}T23:59:59Z'"
             
-            async def get_events():
-                return await client.me.calendar.events.get(**{"query_parameters": query_params})
-            
-            result = asyncio.run(get_events())
+            result = await client.me.calendar.events.get(**{"query_parameters": query_params})
             
             events = []
             if result and result.value:
@@ -446,7 +432,7 @@ class MicrosoftOutlookTool(BaseTool):
                 "Verify Microsoft Graph API permissions for Calendars"
             )
     
-    def create_calendar_event(
+    async def create_calendar_event(
         self,
         subject: str,
         start: str,
@@ -506,10 +492,7 @@ class MicrosoftOutlookTool(BaseTool):
                 is_online_meeting=is_online_meeting,
             )
             
-            async def create_event():
-                return await client.me.calendar.events.post(event)
-            
-            created = asyncio.run(create_event())
+            created = await client.me.calendar.events.post(event)
             
             self._log(f"Calendar event created: {created.id}")
             return self._parse_event(created)
@@ -532,26 +515,31 @@ class MicrosoftOutlookTool(BaseTool):
         Returns:
             Result of the action
         """
-        actions = {
-            "list_emails": lambda: self.list_emails(
+        # Map sync actions to async methods with asyncio.run() wrapper
+        if action == "list_emails":
+            return asyncio.run(self.list_emails(
                 max_results=kwargs.get("max_results", 10),
                 folder=kwargs.get("folder", "inbox"),
                 unread_only=kwargs.get("unread_only", False),
-            ),
-            "get_email": lambda: self.get_email(kwargs["email_id"]),
-            "send_email": lambda: self.send_email(
+            ))
+        elif action == "get_email":
+            return asyncio.run(self.get_email(kwargs["email_id"]))
+        elif action == "send_email":
+            return asyncio.run(self.send_email(
                 to=kwargs["to"],
                 subject=kwargs["subject"],
                 body=kwargs["body"],
                 cc=kwargs.get("cc"),
                 is_html=kwargs.get("is_html", False),
-            ),
-            "list_events": lambda: self.list_calendar_events(
+            ))
+        elif action == "list_events":
+            return asyncio.run(self.list_calendar_events(
                 max_results=kwargs.get("max_results", 10),
                 start_date=kwargs.get("start_date"),
                 end_date=kwargs.get("end_date"),
-            ),
-            "create_event": lambda: self.create_calendar_event(
+            ))
+        elif action == "create_event":
+            return asyncio.run(self.create_calendar_event(
                 subject=kwargs["subject"],
                 start=kwargs["start"],
                 end=kwargs["end"],
@@ -559,18 +547,15 @@ class MicrosoftOutlookTool(BaseTool):
                 location=kwargs.get("location"),
                 attendees=kwargs.get("attendees"),
                 is_online_meeting=kwargs.get("is_online_meeting", False),
-            ),
-            "authenticate": lambda: self.authenticate(),
-        }
-        
-        if action not in actions:
+            ))
+        elif action == "authenticate":
+            return self.authenticate()
+        else:
             raise ToolError(
                 "microsoft_outlook",
                 f"Unknown action: {action}",
-                f"Valid actions: {', '.join(actions.keys())}"
+                f"Valid actions: list_emails, get_email, send_email, list_events, create_event, authenticate"
             )
-        
-        return actions[action]()
 
 
 __all__ = ["MicrosoftOutlookTool", "EmailMessage", "CalendarEvent"]
