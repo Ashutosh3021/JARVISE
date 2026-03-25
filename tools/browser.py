@@ -279,10 +279,6 @@ class BrowserTool(BaseTool):
         if self.manager:
             self.manager.close()
             self.manager = None
-    
-    def __del__(self):
-        """Cleanup on deletion."""
-        self.close()
 
 
 __all__ = ["BrowserTool", "BrowserManager", "SearchResult"]
