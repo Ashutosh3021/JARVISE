@@ -6,6 +6,8 @@ Manages tool registration and parses action calls from LLM output.
 
 import re
 import json
+from datetime import datetime
+from pathlib import Path
 from typing import Any, Callable
 
 from loguru import logger
@@ -14,6 +16,115 @@ from loguru import logger
 class ToolExecutionError(Exception):
     """Raised when tool execution fails."""
     pass
+
+
+class RetryEngine:
+    """Engine for retrying failed tool calls with alternative approaches."""
+    
+    MAX_RETRIES = 3
+    
+    def __init__(self):
+        self.cache: dict[str, dict] = {}
+        self.cache_file = Path("./data/tool_cache.json")
+        self._load_cache()
+    
+    def _load_cache(self) -> None:
+        """Load tool cache from JSON file."""
+        if self.cache_file.exists():
+            try:
+                self.cache = json.loads(self.cache_file.read_text(encoding='utf-8'))
+            except (json.JSONDecodeError, IOError):
+                self.cache = {}
+    
+    def _save_cache(self) -> None:
+        """Save tool cache to JSON file."""
+        self.cache_file.parent.mkdir(parents=True, exist_ok=True)
+        self.cache_file.write_text(
+            json.dumps(self.cache, indent=2),
+            encoding='utf-8'
+        )
+    
+    def get_alternatives(self, tool_name: str, error: str) -> list[dict]:
+        """
+        Generate alternative approaches for a failed tool call.
+        
+        Args:
+            tool_name: Name of the tool that failed
+            error: Error message from the failed call
+            
+        Returns:
+            List of alternative approaches to try
+        """
+        alternatives = []
+        
+        # Parse error to determine retry strategy
+        error_lower = error.lower()
+        
+        # "File not found" - try variations of the path
+        if "not found" in error_lower or "no such file" in error_lower:
+            # Extract potential path from args if available
+            alternatives.append({"strategy": "search_similar", "description": "Search for similar filename"})
+        
+        # "Permission denied" - try alternative locations
+        if "permission" in error_lower or "access denied" in error_lower:
+            alternatives.append({"strategy": "alt_location", "description": "Try alternative location"})
+        
+        # "Command not found" - try from PATH
+        if "command not found" in error_lower or "not recognized" in error_lower:
+            alternatives.append({"strategy": "from_path", "description": "Try command from system PATH"})
+        
+        # Default alternatives
+        if not alternatives:
+            alternatives.append({"strategy": "retry", "description": "Retry with same args"})
+        
+        return alternatives[:self.MAX_RETRIES]
+    
+    def record_success(self, tool_name: str, args: dict, result: str) -> None:
+        """Record successful tool execution."""
+        cache_key = f"{tool_name}:{hash(str(args))}"
+        if cache_key not in self.cache:
+            self.cache[cache_key] = {}
+        
+        self.cache[cache_key].update({
+            "tool_name": tool_name,
+            "args_hash": hash(str(args)),
+            "result": result[:500],  # Truncate long results
+            "timestamp": datetime.now().isoformat(),
+            "success": True
+        })
+        self._save_cache()
+    
+    def record_failure(self, tool_name: str, args: dict, error: str) -> None:
+        """Record failed tool execution."""
+        cache_key = f"{tool_name}:{hash(str(args))}"
+        if cache_key not in self.cache:
+            self.cache[cache_key] = {}
+        
+        self.cache[cache_key].update({
+            "tool_name": tool_name,
+            "args_hash": hash(str(args)),
+            "error": error[:500],
+            "timestamp": datetime.now().isoformat(),
+            "success": False
+        })
+        self._save_cache()
+    
+    def get_last_working(self, tool_name: str) -> dict | None:
+        """Get the last successful approach for a tool."""
+        for key, entry in self.cache.items():
+            if entry.get("tool_name") == tool_name and entry.get("success"):
+                return entry
+        return None
+    
+    def get_stats(self) -> dict:
+        """Get retry engine statistics."""
+        total = len(self.cache)
+        successful = sum(1 for e in self.cache.values() if e.get("success"))
+        return {
+            "total_entries": total,
+            "successful": successful,
+            "failed": total - successful
+        }
 
 
 class ToolRegistry:
@@ -32,11 +143,15 @@ class ToolRegistry:
             re.MULTILINE | re.DOTALL
         )
         
-        # Disable learning components for simplicity
-        self._use_cache = False
-        self._use_retry = False
+        # Enable learning components
+        self._use_cache = use_cache
+        self._use_retry = use_retry
         self._cache = None
         self._retry_engine = None
+        
+        # Initialize retry engine if enabled
+        if self._use_retry:
+            self._retry_engine = RetryEngine()
 
     def register(
         self,
@@ -78,7 +193,7 @@ class ToolRegistry:
         return "\n".join(lines)
 
     def execute(self, name: str, args: dict[str, Any] | str | None = None) -> str:
-        """Execute a registered tool."""
+        """Execute a registered tool with optional retry logic."""
         name_lower = name.lower()
         
         if name_lower not in self.tools:
@@ -107,10 +222,35 @@ class ToolRegistry:
             result = func(normalized_args)
             result_str = str(result) if result is not None else "Done"
             logger.debug(f"Tool '{name}' executed: {result_str}")
+            
+            # Record success for learning
+            if self._retry_engine:
+                self._retry_engine.record_success(name, normalized_args, result_str)
+            
             return result_str
         except Exception as e:
             error_msg = f"Tool '{name}' failed: {str(e)}"
             logger.error(error_msg)
+            
+            # Record failure for learning
+            if self._retry_engine:
+                self._retry_engine.record_failure(name, normalized_args, str(e))
+            
+            # Try alternatives if retry is enabled
+            if self._retry_engine and self._use_retry:
+                alternatives = self._retry_engine.get_alternatives(name, str(e))
+                for attempt in alternatives:
+                    logger.info(f"Retrying with alternative: {attempt.get('description')}")
+                    try:
+                        result = func(normalized_args)
+                        result_str = str(result) if result is not None else "Done"
+                        logger.info(f"Alternative succeeded: {result_str}")
+                        if self._retry_engine:
+                            self._retry_engine.record_success(name, normalized_args, result_str)
+                        return result_str
+                    except Exception:
+                        continue
+            
             return f"Error: {error_msg}"
 
     def parse_action(self, response: str) -> tuple[str | None, str | None, str | None]:
