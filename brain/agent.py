@@ -1,9 +1,10 @@
 """
 JARVIS Brain Layer - ReAct Agent Module
 
-Implements the ReAct (Reasoning + Acting) agent loop.
+Implements the ReAct (Reasoning + Acting) agent loop with learning capabilities.
 """
 
+import re
 from typing import Generator, Callable
 
 from loguru import logger
@@ -230,6 +231,99 @@ class ReActAgent:
     def reset(self) -> None:
         """Reset the agent's conversation history."""
         self.prompt_builder.clear_history()
+    
+    # ========== Learning Methods ==========
+    
+    def on_user_correction(self, user_input: str, last_action: str | None = None) -> dict | None:
+        """
+        Detect and learn from user corrections.
+        
+        Detects patterns like:
+        - "no, open *"
+        - "I meant *"
+        - "not that, *"
+        - "wrong, *"
+        
+        Args:
+            user_input: The user's correction input
+            last_action: The last action the agent took (optional)
+            
+        Returns:
+            Dictionary with learned preference or None if no correction detected
+        """
+        # Import preference store lazily to avoid circular imports
+        try:
+            from memory.preference_store import PreferenceStore
+        except ImportError:
+            return None
+        
+        correction_patterns = [
+            (r"no[,\s]+(?:open|run|start|use)\s+(\w+)", "app_aliases"),
+            (r"i\s+meant\s+(?:open|run|start|use)\s+(\w+)", "app_aliases"),
+            (r"not\s+(?:that|this|it)[,\s]+(?:but|open|run|start|use)\s+(\w+)", "app_aliases"),
+            (r"wrong[,\s]+(?:open|run|start|use)\s+(\w+)", "app_aliases"),
+            (r"use\s+(\w+)\s+instead", "app_aliases"),
+            (r"(\w+)\s+not\s+(\w+)", "command_patterns"),
+        ]
+        
+        user_input_lower = user_input.lower()
+        
+        for pattern, category in correction_patterns:
+            match = re.search(pattern, user_input_lower)
+            if match:
+                # Extract the correction
+                if len(match.groups()) >= 1:
+                    key = match.group(1) if last_action is None else last_action
+                    value = match.group(2) if len(match.groups()) > 1 else match.group(1)
+                    
+                    # Store the preference
+                    store = PreferenceStore()
+                    category_prefs = store.get_category(category)
+                    category_prefs[key] = value
+                    store.set_category(category, category_prefs)
+                    
+                    logger.info(f"Learned preference: {key} -> {value} (category: {category})")
+                    
+                    return {
+                        "key": key,
+                        "value": value,
+                        "category": category
+                    }
+        
+        return None
+    
+    def apply_learned_preferences(self, user_input: str) -> str:
+        """
+        Apply learned preferences to modify user input before processing.
+        
+        Args:
+            user_input: Original user input
+            
+        Returns:
+            Modified user input with preferences applied
+        """
+        try:
+            from memory.preference_store import PreferenceStore
+        except ImportError:
+            return user_input
+        
+        store = PreferenceStore()
+        modified = user_input
+        
+        # Apply app aliases
+        app_aliases = store.get_category("app_aliases")
+        for alias, actual in app_aliases.items():
+            # Replace alias with actual app name
+            pattern = re.compile(rf'\b{re.escape(alias)}\b', re.IGNORECASE)
+            modified = pattern.sub(actual, modified)
+        
+        # Apply command patterns
+        command_patterns = store.get_category("command_patterns")
+        for pattern, replacement in command_patterns.items():
+            if pattern.lower() in modified.lower():
+                modified = modified.replace(pattern, replacement)
+        
+        return modified
 
 
 __all__ = ["ReActAgent"]
