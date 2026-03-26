@@ -33,8 +33,8 @@ class VoicePipeline:
     """
     
     def __init__(self,
-                 stt_model: str = None,
-                 stt_device: str = None,
+                 stt_model: str | None = None,
+                 stt_device: str | None = None,
                  tts_voice: str = "bm_lewis",
                  tts_language: str = "b",
                  silence_timeout: float = 2.5,
