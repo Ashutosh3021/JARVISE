@@ -33,8 +33,8 @@ class VoicePipeline:
     """
     
     def __init__(self,
-                 stt_model: str = "medium",
-                 stt_device: str = "cuda",
+                 stt_model: str = None,
+                 stt_device: str = None,
                  tts_voice: str = "bm_lewis",
                  tts_language: str = "b",
                  silence_timeout: float = 2.5,
@@ -44,14 +44,29 @@ class VoicePipeline:
         Initialize voice pipeline.
         
         Args:
-            stt_model: Whisper model size
-            stt_device: STT device (cuda or cpu)
+            stt_model: Whisper model size (auto-selected from config if not provided)
+            stt_device: STT device (auto-detected if not provided)
             tts_voice: TTS voice ID
             tts_language: TTS language code
             silence_timeout: Seconds of silence before triggering transcription
             max_recording_duration: Maximum recording duration in seconds
             vad_mode: VAD aggressiveness mode (0-3)
         """
+        # Load config for hardware-aware model selection
+        from core.config import load_config
+        config = load_config()  # Will auto-detect VRAM and select appropriate models
+        
+        # Use config model if not explicitly provided
+        if stt_model is None:
+            stt_model = config.stt_model
+        
+        # Auto-detect device if not provided
+        if stt_device is None:
+            stt_device = "cuda" if torch.cuda.is_available() else "cpu"
+        
+        # Store config reference for potential later use
+        self._config = config
+        
         self._silence_timeout = silence_timeout
         self._max_recording_duration = max_recording_duration
         
@@ -85,10 +100,13 @@ class VoicePipeline:
         self._vad = VADWrapper(mode=vad_mode)
         
         # STT — detect CUDA before instantiation to avoid double model load
-        if torch.cuda.is_available():
+        if stt_device == "cuda" and torch.cuda.is_available():
             self._stt = STTEngine(model_size=stt_model, device="cuda")
         else:
-            self._stt = STTEngine(model_size=stt_model, device="cpu", compute_type="float32")
+            # Fall back to CPU
+            device = "cuda" if stt_device == "cuda" and torch.cuda.is_available() else "cpu"
+            compute_type = "float32" if device == "cpu" else "float16"
+            self._stt = STTEngine(model_size=stt_model, device=device, compute_type=compute_type)
         
         # TTS
         try:

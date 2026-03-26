@@ -25,6 +25,22 @@ class Profile(str, Enum):
     HIGH_GPU = "high_gpu"
 
 
+# Hardware-aware model mappings
+STT_MODELS = {
+    Profile.CPU: "tiny",
+    Profile.LOW_GPU: "base",
+    Profile.MID_GPU: "small",
+    Profile.HIGH_GPU: "medium",
+}
+
+LLM_MODELS = {
+    Profile.CPU: "qwen2.5-coder:7b",
+    Profile.LOW_GPU: "qwen2.5-coder:7b",
+    Profile.MID_GPU: "mistral:7b",
+    Profile.HIGH_GPU: "llama3.2:latest",
+}
+
+
 class Config(BaseSettings):
     """JARVIS configuration with .env support and automatic profile selection."""
 
@@ -43,12 +59,12 @@ class Config(BaseSettings):
         default="jarvis",
         description="Wake word to trigger voice assistant"
     )
-    whisper_model: str = Field(
+    stt_model: str = Field(
         default="base",
-        description="Whisper model for speech-to-text"
+        description="Whisper model for speech-to-text (auto-selected based on hardware)"
     )
     kokoro_voice: str = Field(
-        default="af_sarah",
+        default="bm_lewis",
         description="Kokoro voice for text-to-speech"
     )
     tts_speed: float = Field(
@@ -121,8 +137,6 @@ class Config(BaseSettings):
             raise ConfigValidationError("ollama_host must start with http:// or https://")
         return v
 
-    @field_validator("ollama_model")
-    @classmethod
     def validate_ollama_model(cls, v: str) -> str:
         """Validate Ollama model name format."""
         if not v:
@@ -133,14 +147,14 @@ class Config(BaseSettings):
             raise ConfigValidationError(f"Invalid Ollama model name: {v}")
         return v
 
-    @field_validator("whisper_model")
+    @field_validator("stt_model")
     @classmethod
-    def validate_whisper_model(cls, v: str) -> str:
-        """Validate Whisper model name."""
+    def validate_stt_model(cls, v: str) -> str:
+        """Validate STT (Whisper) model name."""
         valid_models = ["tiny", "base", "small", "medium", "large", "large-v2", "large-v3"]
         if v not in valid_models:
             raise ConfigValidationError(
-                f"Invalid whisper_model: {v}. Valid options: {', '.join(valid_models)}"
+                f"Invalid stt_model: {v}. Valid options: {', '.join(valid_models)}"
             )
         return v
 
@@ -198,6 +212,19 @@ class Config(BaseSettings):
             return Profile.LOW_GPU
         return Profile.CPU
 
+    def select_models(self) -> None:
+        """
+        Select appropriate STT and LLM models based on hardware profile.
+        
+        Model mappings:
+        - CPU: tiny STT, qwen2.5-coder:7b LLM (fastest, CPU-friendly)
+        - LOW_GPU: base STT, qwen2.5-coder:7b LLM
+        - MID_GPU: small STT, mistral:7b LLM
+        - HIGH_GPU: medium STT, llama3.2:latest LLM
+        """
+        self.stt_model = STT_MODELS.get(self.profile, "tiny")
+        self.ollama_model = LLM_MODELS.get(self.profile, "llama3.2:latest")
+
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",
@@ -231,6 +258,9 @@ def load_config(vram_mb: int | None = None) -> Config:
     
     # Auto-select profile based on VRAM
     config.profile = config.select_profile()
+    
+    # Auto-select models based on profile
+    config.select_models()
     
     return config
 
