@@ -34,14 +34,13 @@ from backend.main import create_app
 
 
 # ASCII Banner
-BANNER = """
-     ██╗ █████╗ ██████╗ ██╗   ██╗██╗███████╗
-     ██║██╔══██╗██╔══██╗██║   ██║██║██╔════╝
-     ██║███████║██████╔╝██║   ██║██║███████╗
-██   ██║██╔══██║██╔══██╗╚██╗ ██╔╝██║╚════██║
-╚█████╔╝██║  ██║██║  ██║ ╚████╔╝ ██║███████║
- ╚════╝ ╚═╝  ╚═╝╚═╝  ╚═╝  ╚═══╝  ╚═╝╚══════╝
-=============================================
+BANNER = r"""
+     ██  █████  ██████  ██    ██ ██ ███████ 
+     ██ ██   ██ ██   ██ ██    ██ ██ ██      
+     ██ ███████ ██████  ██    ██ ██ ███████ 
+██   ██ ██   ██ ██   ██  ██  ██  ██      ██ 
+ █████  ██   ██ ██   ██   ████   ██ ███████
+============================================
    Starting up...
 """
 
@@ -127,6 +126,10 @@ def exception_handler(exc_type, exc_value, exc_traceback):
     sys.__excepthook__(exc_type, exc_value, exc_traceback)
 
 
+ORANGE = "\033[38;5;208m"
+RESET = "\033[0m"
+
+
 def run_jarvis(args):
     """Main JARVIS run loop."""
     global app_config, memory_manager, agent, voice_pipeline, router
@@ -153,7 +156,7 @@ def run_jarvis(args):
     logger.info("Loading configuration...")
     config = load_config(hw.vram_total_mb)
     logger.info(f"Profile: {config.profile.value}")
-    logger.info(f"Whisper Model: {config.whisper_model}")
+    logger.info(f"STT Model: {config.stt_model}")
     logger.info(f"LLM Model: {config.ollama_model}")
     
     app_config = config
@@ -201,7 +204,7 @@ def run_jarvis(args):
         try:
             from voice.pipeline import VoicePipeline
             voice_pipeline = VoicePipeline(
-                stt_model=config.whisper_model,
+                stt_model=config.stt_model,
                 stt_device="cpu"
             )
             logger.info("Voice pipeline ready")
@@ -213,7 +216,7 @@ def run_jarvis(args):
             # Wire transcription callback — Contract C-7: MUST be before start()
             def handle_transcription(text: str, confidence: float):
                 """Process transcribed speech through router or agent, then speak response."""
-                logger.info(f"Voice input: '{text}' (confidence: {confidence:.2f})")
+                logger.info(f"{ORANGE}User: '{text}'{RESET} (confidence: {confidence:.2f})")
                 try:
                     # Get memory context BEFORE agent.run() - per requirement memory loaded before streaming
                     memory_context = memory_manager.format_context_for_prompt(text) if memory_manager else None
@@ -228,6 +231,8 @@ def run_jarvis(args):
                             response = agent.run(text, memory_context=memory_context)
                     else:
                         response = agent.run(text, memory_context=memory_context)
+                    
+                    logger.info(f"{ORANGE}JARVIS: {response}{RESET}")
                     
                     # Auto-save every exchange to memory after response
                     if memory_manager:
@@ -274,6 +279,8 @@ def run_jarvis(args):
                 # Get memory context BEFORE agent.run() - per requirement memory loaded before streaming
                 memory_context = memory_manager.format_context_for_prompt(user_input) if memory_manager else None
                 
+                logger.info(f"{ORANGE}User: {user_input}{RESET}")
+                
                 if router:
                     # Use smart routing
                     route_result = router.route(user_input)
@@ -294,7 +301,7 @@ def run_jarvis(args):
                     # Router disabled, use LLM
                     response = agent.run(user_input, memory_context=memory_context)
                 
-                print(f"\nJARVIS: {response}")
+                logger.info(f"{ORANGE}JARVIS: {response}{RESET}")
                 
                 # Auto-save every exchange to memory after response
                 if memory_manager:

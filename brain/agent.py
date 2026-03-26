@@ -68,7 +68,7 @@ class ReActAgent:
         
         full_response = ""
         tool_calls = 0
-        max_tool_calls = 3  # Limit tool calls to prevent infinite loops
+        max_tool_calls = 10  # Limit tool calls to prevent infinite loops
         
         for iteration in range(self.max_iterations):
             logger.debug(f"ReAct iteration {iteration + 1}/{self.max_iterations}")
@@ -157,7 +157,7 @@ class ReActAgent:
         
         full_response = ""
         tool_calls = 0
-        max_tool_calls = 3  # Limit tool calls to prevent infinite loops
+        max_tool_calls = 10  # Limit tool calls to prevent infinite loops
         
         for iteration in range(self.max_iterations):
             logger.debug(f"ReAct iteration {iteration + 1}/{self.max_iterations}")

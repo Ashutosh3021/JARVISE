@@ -90,7 +90,8 @@ class VoicePipeline:
         # Keyboard handler
         self._keyboard = KeyboardHandler(
             on_press_callback=self._on_space_press,
-            on_release_callback=self._on_space_release
+            on_release_callback=self._on_space_release,
+            max_recording_duration=max_recording_duration
         )
         
         # Audio recorder
@@ -128,7 +129,7 @@ class VoicePipeline:
         """
         frame_duration_ms = 20
         frame_size = int(sample_rate * frame_duration_ms / 1000)  # 320 samples
-        pcm = (audio * 32768).astype(np.int16).tobytes()
+        pcm = (np.clip(audio, -1.0, 1.0) * 32767).astype(np.int16).tobytes()
         frame_bytes = frame_size * 2  # 2 bytes per int16 sample = 640 bytes
         for i in range(0, len(pcm) - frame_bytes, frame_bytes):
             frame = pcm[i:i + frame_bytes]
