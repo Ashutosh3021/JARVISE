@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="https://img.shields.io/badge/JARVIS-v1.0.203-blueviolet?style=for-the-badge&logo=robot&logoColor=white" alt="JARVIS v1.0.203"/>
+<img src="https://img.shields.io/badge/JARVIS-v1.0.204-blueviolet?style=for-the-badge&logo=robot&logoColor=white" alt="JARVIS v1.0.204"/>
 
 # 👾 JARVIS
 ### *Just A Rather Very Intelligent System*
@@ -48,6 +48,21 @@ python main.py
 ```
 
 Open your browser at **`http://localhost:8000`** and start chatting.
+
+---
+
+## 🖼️ Preview
+
+<div align="center">
+
+**Startup — hardware detection & boot sequence**
+
+![JARVIS startup terminal showing ASCII logo, boot messages and hardware detection](Image\ss.png)
+
+
+*JARVIS boots in under a second, detects your hardware, initializes the logger, and serves the UI — all locally.*
+
+</div>
 
 ---
 
