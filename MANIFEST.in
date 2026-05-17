@@ -1,0 +1,8 @@
+include README.md
+include LICENSE
+include .env.example
+include HowToRun.md
+recursive-include ui/dist *
+recursive-exclude tests *
+recursive-exclude __pycache__ *
+recursive-exclude *.egg-info *

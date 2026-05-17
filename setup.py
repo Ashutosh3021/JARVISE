@@ -1,43 +1,10 @@
 """
-JARVIS - Windows AI Voice Assistant
-Setup configuration
+JARVIS (jarvise on PyPI) — setuptools shim.
+
+Build and metadata are defined in pyproject.toml.
 """
 
-from setuptools import setup, find_packages
+from setuptools import setup
 
-with open("requirements.txt") as f:
-    requirements = [
-        line.strip()
-        for line in f.read().splitlines()
-        if line.strip() and not line.strip().startswith("#")
-    ]
-
-setup(
-    name="jarvis",
-    version="0.1.0",
-    description="Windows AI Voice Assistant",
-    author="Developer",
-    python_requires=">=3.11",
-    packages=find_packages(),
-    include_package_data=True,
-    install_requires=requirements,
-    extras_require={
-        "dev": [
-            "pytest>=8.0.0",
-            "pytest-asyncio>=0.23.0",
-            "pytest-cov>=4.1.0",
-        ]
-    },
-    entry_points={
-        "console_scripts": [
-            "jarvis=main:main",
-        ],
-    },
-    classifiers=[
-        "Development Status :: 3 - Alpha",
-        "Intended Audience :: Developers",
-        "Programming Language :: Python :: 3.11",
-        "Programming Language :: Python :: 3.12",
-        "Operating System :: Microsoft :: Windows",
-    ],
-)
+if __name__ == "__main__":
+    setup()

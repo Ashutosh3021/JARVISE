@@ -1,0 +1,134 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "jarvise"
+version = "1.0.0"
+description = "Privacy-first local AI assistant with voice, memory, and Ollama — JARVIS"
+readme = "README.md"
+license = "MIT"
+requires-python = ">=3.11"
+authors = [
+    { name = "J.A.R.V.I.S" },
+]
+keywords = [
+    "jarvis",
+    "ai-assistant",
+    "ollama",
+    "voice-assistant",
+    "chromadb",
+    "fastapi",
+    "local-ai",
+    "react-agent",
+]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+]
+dependencies = [
+    "pydantic>=2.0.0",
+    "pydantic-settings>=2.0.0",
+    "python-dotenv>=1.0.0",
+    "pyyaml>=6.0.0",
+    "psutil>=5.9.0",
+    "requests>=2.31.0",
+    "ollama>=0.1.0",
+    "chromadb>=0.4.0",
+    "sentence-transformers>=2.2.0",
+    "fastapi>=0.109.0",
+    "uvicorn[standard]>=0.27.0",
+    "websockets>=12.0.0",
+    "python-multipart>=0.0.6",
+    "loguru>=0.7.0",
+    "aiofiles>=23.2.0",
+    "httpx>=0.26.0",
+    "duckduckgo-search>=6.0.0",
+    "numpy>=1.24.0",
+    "cryptography>=41.0.0",
+]
+
+[project.optional-dependencies]
+voice = [
+    "faster-whisper>=1.0.0",
+    "kokoro-onnx>=0.4.0,<0.5.0",
+    "sounddevice>=0.4.0",
+    "soundfile>=0.12.0",
+    "webrtcvad-wheels>=2.0.10",
+    "keyboard>=0.13.0",
+    "librosa>=0.10.0",
+    "nvidia-ml-py>=13.0.0",
+    "gpu-list>=0.1.0",
+]
+google = [
+    "google-api-python-client>=2.100.0",
+    "google-auth-oauthlib>=1.0.0",
+    "google-auth-httplib2>=0.2.0",
+]
+microsoft = [
+    "msgraph-sdk>=1.0.0",
+    "azure-identity>=1.15.0",
+    "msal>=1.24.0",
+]
+browser = [
+    "playwright>=1.40.0",
+]
+cli = [
+    "aiohttp>=3.9.0",
+    "prompt-toolkit>=3.0.0",
+]
+all = [
+    "jarvise[voice,google,microsoft,browser,cli]",
+]
+dev = [
+    "pytest>=8.0.0",
+    "pytest-asyncio>=0.23.0",
+    "pytest-cov>=4.1.0",
+    "build>=1.0.0",
+    "twine>=5.0.0",
+]
+
+[project.scripts]
+jarvis = "main:main"
+jarvis-cli = "cli.__main__:main"
+
+[project.urls]
+Homepage = "https://github.com/Ashutosh3021/JARVISE"
+Documentation = "https://github.com/Ashutosh3021/JARVISE/blob/main/HowToRun.md"
+Repository = "https://github.com/Ashutosh3021/JARVISE"
+Issues = "https://github.com/Ashutosh3021/JARVISE/issues"
+
+[tool.setuptools]
+include-package-data = true
+py-modules = ["main"]
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = [
+    "jarvise*",
+    "brain*",
+    "backend*",
+    "core*",
+    "memory*",
+    "tools*",
+    "voice*",
+    "context*",
+    "learning*",
+    "cli*",
+]
+exclude = [
+    "tests*",
+    "ui*",
+    "dist-npm*",
+    "Docs*",
+    "Image*",
+]
+
+[tool.setuptools.package-data]
+"*" = ["py.typed"]

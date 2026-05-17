@@ -29,15 +29,61 @@
 
 </div>
 
-## 🚀 Quick Start
+## Quick Start
+
+> **New to JARVIS?** Follow the setup guide first → **[HowToRun.md](HowToRun.md)**
+
+### Install from PyPI
+
+```bash
+# Core install (no voice)
+pip install jarvise
+
+# With voice support (Whisper STT + Kokoro TTS)
+pip install jarvise[voice]
+
+# Everything — voice, Google, Microsoft, browser, CLI
+pip install jarvise[all]
+```
+
+### Prerequisites
+
+1. **Ollama** must be installed and running before starting JARVIS:
+   ```bash
+   # Install Ollama: https://ollama.com/download
+   ollama serve
+   ollama pull llama3.2
+   ```
+
+2. **Configure your environment:**
+   ```bash
+   cp .env.example .env
+   # Edit .env and set OLLAMA_MODEL, BACKEND_PORT, etc.
+   ```
+
+3. **Run JARVIS:**
+   ```bash
+   jarvis
+   ```
+   Or from source: `python main.py`
+
+Open your browser at **`http://localhost:8000`** and start chatting.
+
+---
+
+## 🚀 Detailed Setup
 
 > **New to JARVIS?** Follow the setup guide first → **[HowToRun.md](HowToRun.md)**
 
 ```bash
-# 1. Clone the repository
-git clone https://github.com/your-username/JARVIS.git && cd JARVIS
+# 1. Install from PyPI (recommended)
+pip install jarvise
 
-# 2. Install dependencies
+# Or clone and install from source
+git clone https://github.com/your-username/JARVISE.git && cd JARVISE
+pip install -e .
+
+# 2. Install dependencies (source / dev only)
 pip install -r requirements.txt
 
 # 3. Configure your environment
@@ -46,8 +92,6 @@ cp .env.example .env
 # 4. Launch JARVIS
 python main.py
 ```
-
-Open your browser at **`http://localhost:8000`** and start chatting.
 
 ---
 
