@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="https://img.shields.io/badge/JARVIS-v1.0.204-blueviolet?style=for-the-badge&logo=robot&logoColor=white" alt="JARVIS v1.0.204"/>
+<img src="https://img.shields.io/badge/JARVIS-v1.0.0-blueviolet?style=for-the-badge&logo=robot&logoColor=white" alt="JARVIS v1.0.0"/>
 
 # 👾 JARVIS
 ### *Just A Rather Very Intelligent System*
@@ -10,6 +10,7 @@
 <br/>
 
 [![Python Version](https://img.shields.io/badge/python-3.11+-3776AB?style=flat-square&logo=python&logoColor=white)](https://www.python.org/downloads/)
+[![PyPI](https://img.shields.io/badge/PyPI-jarvise-blue?style=flat-square&logo=pypi&logoColor=white)](https://pypi.org/project/jarvise)
 [![FastAPI](https://img.shields.io/badge/FastAPI-backend-009688?style=flat-square&logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com/)
 [![React](https://img.shields.io/badge/React-18-61DAFB?style=flat-square&logo=react&logoColor=black)](https://react.dev/)
 [![Ollama](https://img.shields.io/badge/Ollama-LLM-FF6600?style=flat-square)](https://ollama.com)
@@ -29,67 +30,76 @@
 
 </div>
 
-## Quick Start
+## 🚀 Quick Start
 
-> **New to JARVIS?** Follow the setup guide first → **[HowToRun.md](HowToRun.md)**
+### Prerequisites
+
+Before installing, make sure you have:
+
+- **Python 3.11+** — [python.org](https://www.python.org/downloads/)
+- **Ollama** — [ollama.com](https://ollama.com) — must be running on `localhost:11434`
+
+```bash
+# Start Ollama and pull a model
+ollama serve
+ollama pull llama3.2
+```
 
 ### Install from PyPI
 
 ```bash
-# Core install (no voice)
+# Core install — text chat + web UI + API (no voice)
 pip install jarvise
 
 # With voice support (Whisper STT + Kokoro TTS)
 pip install jarvise[voice]
 
+# With Google Calendar / Gmail tools
+pip install jarvise[google]
+
+# With Microsoft Outlook tools
+pip install jarvise[microsoft]
+
 # Everything — voice, Google, Microsoft, browser, CLI
 pip install jarvise[all]
 ```
 
-### Prerequisites
+### Configure and Run
 
-1. **Ollama** must be installed and running before starting JARVIS:
-   ```bash
-   # Install Ollama: https://ollama.com/download
-   ollama serve
-   ollama pull llama3.2
-   ```
+```bash
+# 1. Copy the example env file and edit it
+cp .env.example .env
 
-2. **Configure your environment:**
-   ```bash
-   cp .env.example .env
-   # Edit .env and set OLLAMA_MODEL, BACKEND_PORT, etc.
-   ```
+# 2. Launch JARVIS
+jarvis
+```
 
-3. **Run JARVIS:**
-   ```bash
-   jarvis
-   ```
-   Or from source: `python main.py`
-
-Open your browser at **`http://localhost:8000`** and start chatting.
+Open **http://localhost:8000** in your browser and start chatting.
 
 ---
 
-## 🚀 Detailed Setup
-
-> **New to JARVIS?** Follow the setup guide first → **[HowToRun.md](HowToRun.md)**
+## 🖥️ Install from Source
 
 ```bash
-# 1. Install from PyPI (recommended)
-pip install jarvise
+# Clone the repo
+git clone https://github.com/Ashutosh3021/JARVISE.git
+cd JARVISE
 
-# Or clone and install from source
-git clone https://github.com/your-username/JARVISE.git && cd JARVISE
-pip install -e .
+# Create and activate a virtual environment
+python -m venv .venv
 
-# 2. Install dependencies (source / dev only)
+# Windows
+.venv\Scripts\activate
+# Linux / macOS
+source .venv/bin/activate
+
+# Install dependencies
 pip install -r requirements.txt
 
-# 3. Configure your environment
+# Configure environment
 cp .env.example .env
 
-# 4. Launch JARVIS
+# Run
 python main.py
 ```
 
@@ -101,8 +111,7 @@ python main.py
 
 **Startup — hardware detection & boot sequence**
 
-![JARVIS startup terminal showing ASCII logo, boot messages and hardware detection](Image\ss.png)
-
+![JARVIS startup terminal showing ASCII logo, boot messages and hardware detection](Image/ss.png)
 
 *JARVIS boots in under a second, detects your hardware, initializes the logger, and serves the UI — all locally.*
 
@@ -231,7 +240,7 @@ flowchart LR
 JARVIS/
 │
 ├── 🖥️  backend/           # FastAPI server, WebSocket handlers, routes
-├── 🧠  brain/             # ReAct agent, LangChain chains, prompt templates
+├── 🧠  brain/             # ReAct agent, chains, prompt templates
 ├── 💾  memory/            # ChromaDB vector store + MEMORY.md fact file
 ├── 🛠️  tools/             # Tool modules: browser, code_exec, system_monitor, etc.
 ├── 🎤  voice/             # STT (Faster-Whisper) + TTS (Kokoro) pipeline
@@ -243,7 +252,7 @@ JARVIS/
 │
 ├── main.py               # 🚀 Application entry point
 ├── HowToRun.md           # 📋 Step-by-step setup guide
-├── .env                  # ⚙️  Configuration (API endpoints, model names, etc.)
+├── .env.example          # ⚙️  Environment template
 └── requirements.txt      # 📦 Python dependencies
 ```
 
@@ -255,7 +264,7 @@ JARVIS/
 |-------|-----------|---------|
 | **Backend** | [FastAPI](https://fastapi.tiangolo.com/) + Python 3.11+ | REST API, WebSocket, async server |
 | **AI Inference** | [Ollama](https://ollama.com) (Llama 3.2) | Local LLM — no cloud needed |
-| **Agent Framework** | [LangChain](https://langchain.com/) | ReAct agent loop, chain orchestration |
+| **Agent Framework** | ReAct loop | Step-by-step reasoning with tools |
 | **Memory / RAG** | [ChromaDB](https://www.trychroma.com/) | Vector embeddings, semantic recall |
 | **Speech-to-Text** | [Faster-Whisper](https://github.com/SYSTRAN/faster-whisper) | Offline voice transcription |
 | **Text-to-Speech** | [Kokoro](https://github.com/remsky/Kokoro-FastAPI) | Offline neural TTS |
@@ -270,12 +279,12 @@ JARVIS is configured via a `.env` file in the project root:
 
 ```env
 # Ollama
-OLLAMA_BASE_URL=http://localhost:11434
-OLLAMA_MODEL=llama3.2
+OLLAMA_HOST=http://localhost:11434
+OLLAMA_MODEL=llama3.2:latest
 
 # Server
-BACKEND_PORT=8000
-BACKEND_HOST=0.0.0.0
+UI_HOST=127.0.0.1
+UI_PORT=8000
 
 # Memory
 CHROMA_PERSIST_DIR=./memory/chroma
@@ -299,11 +308,13 @@ python main.py
 # Backend API only (no UI)
 python -m backend.main
 
-# CLI shell
+# CLI interactive shell
+jarvis shell
+# or
 python -m cli shell
 
 # CLI — single query
-python -m cli ask "What's the weather like today?"
+jarvis chat "What's the weather like today?"
 ```
 
 ### Running Tests
@@ -328,11 +339,24 @@ pytest tests/ -v --tb=short
 
 ---
 
+## 🔧 Troubleshooting
+
+| Problem | Fix |
+|---------|-----|
+| `jarvis command not found` | Reinstall: `pip install jarvise` — check entry points in pyproject.toml |
+| Ollama not responding | Run `ollama serve` and confirm `ollama list` shows your model |
+| Port already in use | Set `UI_PORT=8001` in `.env` |
+| VRAM / memory issues | Switch to a smaller model: `OLLAMA_MODEL=llama3.2:1b` |
+| Voice not working | Install voice extras: `pip install jarvise[voice]` |
+
+---
+
 ## 📖 Documentation
 
 | Document | Description |
 |----------|-------------|
 | [HowToRun.md](HowToRun.md) | Prerequisites, installation, and first-run walkthrough |
+| [publish.md](publish.md) | PyPI deployment guide |
 | [Docs/](Docs/) | Architecture deep-dives, API reference, tool guides |
 
 ---
@@ -349,7 +373,7 @@ pytest tests/ -v --tb=short
 
 ## 🤝 Contributing
 
-Contributions are welcome! Please open an issue first to discuss what you'd like to change. For bug fixes, feel free to submit a PR directly.
+Contributions are welcome. Please open an issue first to discuss what you'd like to change. For bug fixes, feel free to submit a PR directly.
 
 ---
 
