@@ -7,8 +7,9 @@ import numpy as np
 from typing import Optional, Callable, Tuple
 import threading
 import time
-import torch
 from loguru import logger
+
+from core.hardware import detect_hardware
 
 from .keyboard_handler import KeyboardHandler
 from .recorder import AudioRecorder
@@ -54,7 +55,8 @@ class VoicePipeline:
         """
         # Load config for hardware-aware model selection
         from core.config import load_config
-        config = load_config()  # Will auto-detect VRAM and select appropriate models
+        hw = detect_hardware()
+        config = load_config(hw.vram_total_mb)
         
         # Use config model if not explicitly provided
         if stt_model is None:
@@ -62,7 +64,7 @@ class VoicePipeline:
         
         # Auto-detect device if not provided
         if stt_device is None:
-            stt_device = "cuda" if torch.cuda.is_available() else "cpu"
+            stt_device = "cuda" if hw.has_nvidia else "cpu"
         
         # Store config reference for potential later use
         self._config = config
@@ -100,14 +102,11 @@ class VoicePipeline:
         # VAD
         self._vad = VADWrapper(mode=vad_mode)
         
-        # STT — detect CUDA before instantiation to avoid double model load
-        if stt_device == "cuda" and torch.cuda.is_available():
+        # STT — use hardware profile; STTEngine falls back to CPU if CUDA unavailable
+        if stt_device == "cuda" and hw.has_nvidia:
             self._stt = STTEngine(model_size=stt_model, device="cuda")
         else:
-            # Fall back to CPU
-            device = "cuda" if stt_device == "cuda" and torch.cuda.is_available() else "cpu"
-            compute_type = "float32" if device == "cpu" else "float16"
-            self._stt = STTEngine(model_size=stt_model, device=device, compute_type=compute_type)
+            self._stt = STTEngine(model_size=stt_model, device="cpu", compute_type="float32")
         
         # TTS
         try:

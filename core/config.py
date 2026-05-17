@@ -222,8 +222,10 @@ class Config(BaseSettings):
         - MID_GPU: small STT, mistral:7b LLM
         - HIGH_GPU: medium STT, llama3.2:latest LLM
         """
-        self.stt_model = STT_MODELS.get(self.profile, "tiny")
-        self.ollama_model = LLM_MODELS.get(self.profile, "llama3.2:latest")
+        if self.stt_model == "base":  # Field default = not explicitly set
+            self.stt_model = STT_MODELS.get(self.profile, "tiny")
+        if self.ollama_model == "llama3.2:latest":  # Field default = not explicitly set
+            self.ollama_model = LLM_MODELS.get(self.profile, "llama3.2:latest")
 
     model_config = SettingsConfigDict(
         env_file=".env",

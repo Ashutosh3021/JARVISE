@@ -88,21 +88,14 @@ class TTSEngine:
             audio_arrays = []
             
             for result in self._pipeline(text, voice=self._voice):
-                # kokoro >=1.0 returns Result namedtuple with output.audio tensor
-                audio = result.output.audio
-                if audio is not None:
-                    # Convert tensor to numpy if needed
-                    import torch
-                    if isinstance(audio, torch.Tensor):
-                        audio = audio.cpu().numpy()
-                    # Adjust speed by resampling if needed
-                    if self._speed != 1.0:
-                        audio = self._adjust_speed(audio, self._speed)
+                audio = self._extract_audio_chunk(result)
+                if audio is not None and len(audio) > 0:
                     audio_arrays.append(audio)
             
             if audio_arrays:
-                # Concatenate all audio segments
                 result = np.concatenate(audio_arrays)
+                if self._speed != 1.0:
+                    result = self._adjust_speed(result, self._speed)
                 logger.info(f"Generated {len(result)} samples ({len(result)/24000:.2f}s) of audio")
                 return result
             else:
@@ -113,6 +106,26 @@ class TTSEngine:
             logger.error(f"TTS synthesis error: {e}")
             raise
     
+    def _extract_audio_chunk(self, result) -> np.ndarray | None:
+        """Extract audio array from a Kokoro pipeline result (supports onnx API variants)."""
+        audio = None
+        if hasattr(result, "output") and hasattr(result.output, "audio"):
+            audio = result.output.audio
+        elif hasattr(result, "audio"):
+            audio = result.audio
+
+        if audio is None:
+            return None
+
+        try:
+            import torch
+            if isinstance(audio, torch.Tensor):
+                audio = audio.cpu().numpy()
+        except ImportError:
+            pass
+
+        return np.asarray(audio, dtype=np.float32)
+
     def _adjust_speed(self, audio: np.ndarray, speed: float) -> np.ndarray:
         """
         Adjust audio speed by resampling.

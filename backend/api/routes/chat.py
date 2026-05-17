@@ -48,8 +48,8 @@ async def rest_chat(
     if not request.message:
         return ChatResponse(response="No message provided")
     
-    # Run agent synchronously and return response
-    response = agent.run(request.message)
+    # Run agent in thread pool to avoid blocking the event loop
+    response = await asyncio.to_thread(agent.run, request.message)
     return ChatResponse(response=response)
 
 
@@ -126,6 +126,11 @@ async def websocket_chat(
                     "type": "chat.stream",
                     "status": "processing"
                 })
+
+                memory_context = None
+                memory_manager = getattr(websocket.app.state, "memory", None)
+                if memory_manager is not None:
+                    memory_context = memory_manager.format_context_for_prompt(user_message)
                 
                 # Process message through agent with TRUE streaming
                 # Use asyncio.Queue to hand off tokens from thread to async context
@@ -135,19 +140,25 @@ async def websocket_chat(
                 def run_generator():
                     """Run the generator in a thread and put tokens in queue."""
                     try:
-                        for token, is_final in agent.stream_run(user_message):
+                        for token, is_final in agent.stream_run(
+                            user_message, memory_context=memory_context
+                        ):
                             if stop_event.is_set():
                                 break
-                            # Put token in queue - will block if queue is full
-                            # Use 3-tuple to match consumer unpacking
-                            token_queue.put_nowait((token, is_final, None))
+                            loop.call_soon_threadsafe(
+                                token_queue.put_nowait, (token, is_final, None)
+                            )
                             if is_final:
                                 break
                     except Exception as e:
                         logger.error(f"Error in agent stream: {e}")
-                        token_queue.put_nowait((None, True, str(e)))
+                        loop.call_soon_threadsafe(
+                            token_queue.put_nowait, (None, True, str(e))
+                        )
                     finally:
-                        token_queue.put_nowait((None, None, None))  # Sentinel
+                        loop.call_soon_threadsafe(
+                            token_queue.put_nowait, (None, None, None)
+                        )
                 
                 # Start generator in thread pool
                 loop = asyncio.get_running_loop()

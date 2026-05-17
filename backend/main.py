@@ -21,7 +21,8 @@ async def lifespan(app: FastAPI):
     from brain.agent import ReActAgent
     from brain.router import CommandRouter
     from memory import MemoryManager
-    from core.config import Config
+    from core.config import load_config
+    from core.hardware import detect_hardware
     from brain.tools import create_tools_registry
     
     # Startup: create shared instances
@@ -34,7 +35,7 @@ async def lifespan(app: FastAPI):
     
     logger.info("Creating shared memory manager...")
     try:
-        config = Config()
+        config = load_config(detect_hardware().vram_total_mb)
         app.state.memory = MemoryManager(config)
     except Exception as e:
         logger.error(f"Failed to create memory manager: {e}")

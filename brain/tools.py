@@ -12,6 +12,8 @@ from typing import Any, Callable
 
 from loguru import logger
 
+from tools.base import ConfirmationRequest
+
 
 class ToolExecutionError(Exception):
     """Raised when tool execution fails."""
@@ -228,6 +230,12 @@ class ToolRegistry:
                 self._retry_engine.record_success(name, normalized_args, result_str)
             
             return result_str
+        except ConfirmationRequest as e:
+            details = f" {e.details}" if e.details else ""
+            return (
+                f"Confirmation required for tool '{e.tool_name}' action '{e.action}'.{details} "
+                "Ask the user to confirm, then retry with confirmation if supported."
+            )
         except Exception as e:
             error_msg = f"Tool '{name}' failed: {str(e)}"
             logger.error(error_msg)
@@ -372,7 +380,11 @@ def create_default_registry() -> ToolRegistry:
             return "Error: No file path provided"
         
         try:
+            safe_paths = [str(Path.cwd()), str(Path.home())]
             abs_path = Path(filepath).resolve()
+            allowed = any(str(abs_path).startswith(sp) for sp in safe_paths)
+            if not allowed:
+                return f"Error: Access denied to {filepath}"
             abs_path.parent.mkdir(parents=True, exist_ok=True)
             abs_path.write_text(content, encoding='utf-8')
             return f"Success: Written to {filepath}"

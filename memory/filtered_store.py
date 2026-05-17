@@ -197,19 +197,21 @@ class FilteredMemory:
             self._stats["by_project"][project] = self._stats["by_project"].get(project, 0) + 1
         self._stats["importance_sum"] += importance
         
-        # Also store in ChromaDB if available
+        # Also store in ChromaDB if available (full content in documents field)
         if self._chroma_client:
             try:
-                self._chroma_client.save_conversation(
-                    user_query=content,
-                    assistant_response="",
-                    session_id=project or "default",
-                    metadata={
-                        "entry_id": entry_id,
-                        "entry_type": entry_type.value,
-                        "importance": importance,
-                        **metadata
-                    }
+                chroma_metadata = {
+                    "session_id": project or "default",
+                    "entry_id": entry_id,
+                    "entry_type": entry_type.value,
+                    "importance": importance,
+                    **metadata,
+                }
+                self._chroma_client.collection.add(
+                    ids=[entry_id],
+                    embeddings=[self._chroma_client._embed(content)],
+                    documents=[content],
+                    metadatas=[chroma_metadata],
                 )
             except Exception:
                 pass  # ChromaDB storage is best-effort
@@ -235,43 +237,80 @@ class FilteredMemory:
         """
         if filter is None:
             filter = MemoryFilter()
-        
-        # Compute query relevance scores using lexical matching
-        query_terms = set(query.lower().split())
-        
-        results = []
-        
-        for entry in self._memory_index.values():
-            # Apply filters
+
+        scored: list[tuple[MemoryEntry, float]] = []
+        seen_ids: set[str] = set()
+
+        def _passes_filter(entry: MemoryEntry) -> bool:
             if filter.entry_types and entry.entry_type not in filter.entry_types:
-                continue
-            
+                return False
             if filter.projects and entry.project not in filter.projects:
-                continue
-            
+                return False
             if filter.min_importance > 0 and entry.importance < filter.min_importance:
-                continue
-            
+                return False
             if filter.date_from and entry.created_at < filter.date_from:
-                continue
-            
+                return False
             if filter.date_to and entry.created_at > filter.date_to:
+                return False
+            return True
+
+        if self._chroma_client:
+            normalized = self._chroma_client._normalize_query(query)
+            fetch_n = max(filter.limit * 3, 10)
+            for hit in self._chroma_client.get_context(normalized, n_results=fetch_n):
+                meta = hit.get("metadata") or {}
+                entry_id = meta.get("entry_id") or hit.get("id")
+                if not entry_id or entry_id in seen_ids:
+                    continue
+                seen_ids.add(entry_id)
+
+                if entry_id in self._memory_index:
+                    entry = self._memory_index[entry_id]
+                else:
+                    doc = hit.get("document") or ""
+                    entry_type_str = meta.get("entry_type", MemoryEntryType.CONVERSATION.value)
+                    try:
+                        entry_type = MemoryEntryType(entry_type_str)
+                    except ValueError:
+                        entry_type = MemoryEntryType.CONVERSATION
+                    entry = MemoryEntry(
+                        id=entry_id,
+                        content=doc,
+                        entry_type=entry_type,
+                        importance=float(meta.get("importance", 0.0)),
+                        project=meta.get("session_id"),
+                        metadata=meta,
+                    )
+
+                if not _passes_filter(entry):
+                    continue
+
+                distance = hit.get("distance")
+                if distance is not None:
+                    relevance = max(0.0, 1.0 - distance)
+                else:
+                    relevance = 0.5
+                scored.append((entry, relevance))
+
+        # Include in-memory entries not returned by Chroma (e.g. not yet persisted)
+        normalized_query = (
+            self._chroma_client._normalize_query(query)
+            if self._chroma_client
+            else query.strip().lower()
+        )
+        query_terms = set(normalized_query.split())
+        for entry in self._memory_index.values():
+            if entry.id in seen_ids:
                 continue
-            
-            # Calculate query relevance score (lexical matching)
+            if not _passes_filter(entry):
+                continue
             content_lower = entry.content.lower()
             match_count = sum(1 for term in query_terms if term in content_lower)
             query_relevance = match_count / len(query_terms) if query_terms else 0.0
-            
-            # Store entry with relevance score
-            results.append((entry, query_relevance))
-        
-        # Sort by query relevance first, then by importance
-        # Entries with query terms get priority over importance-only sorting
-        results.sort(key=lambda x: (x[1], x[0].importance), reverse=True)
-        
-        # Extract entries and apply limit
-        return [entry for entry, _ in results[:filter.limit]]
+            scored.append((entry, query_relevance))
+
+        scored.sort(key=lambda x: (x[1], x[0].importance), reverse=True)
+        return [entry for entry, _ in scored[:filter.limit]]
     
     def get_by_project(self, project: str) -> list[MemoryEntry]:
         """

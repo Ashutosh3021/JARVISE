@@ -104,19 +104,43 @@ class OllamaClient:
                 timeout=120,
             )
             response.raise_for_status()
-            
-            for line in response.iter_lines():
-                if line:
-                    try:
-                        data = line.decode("utf-8")
-                        if data.startswith("{"):
-                            chunk = json.loads(data)
-                            if "message" in chunk and "content" in chunk["message"]:
-                                content = chunk["message"]["content"]
-                                if content:
-                                    yield content
-                    except (json.JSONDecodeError, UnicodeDecodeError, ValueError):
+
+            line_buffer = ""
+            for raw_chunk in response.iter_content(chunk_size=None, decode_unicode=True):
+                if not raw_chunk:
+                    continue
+                line_buffer += raw_chunk
+                while "\n" in line_buffer:
+                    line, line_buffer = line_buffer.split("\n", 1)
+                    line = line.strip()
+                    if not line:
                         continue
+                    try:
+                        chunk = json.loads(line)
+                    except json.JSONDecodeError:
+                        logger.warning(f"Malformed Ollama stream line: {line[:120]}")
+                        continue
+
+                    if chunk.get("done"):
+                        return
+
+                    message = chunk.get("message") or {}
+                    content = message.get("content")
+                    if content:
+                        yield content
+
+            # Flush any remaining buffered line
+            remainder = line_buffer.strip()
+            if remainder:
+                try:
+                    chunk = json.loads(remainder)
+                    if not chunk.get("done"):
+                        message = chunk.get("message") or {}
+                        content = message.get("content")
+                        if content:
+                            yield content
+                except json.JSONDecodeError:
+                    logger.warning(f"Malformed Ollama stream tail: {remainder[:120]}")
         except requests.exceptions.RequestException as e:
             logger.error(f"Streaming chat request failed: {e}")
             raise OllamaConnectionError(f"Failed to stream chat with Ollama: {e}")

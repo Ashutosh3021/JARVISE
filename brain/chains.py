@@ -8,6 +8,7 @@ Each step's output feeds into the next step.
 import uuid
 import time
 import asyncio
+import concurrent.futures
 from enum import Enum
 from dataclasses import dataclass, field
 from typing import Callable, Any
@@ -437,13 +438,16 @@ Example response format:
         Returns:
             ChainResult with execution details
         """
-        # Use explicit event loop instead of asyncio.run() for better control
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
+        def _run() -> ChainResult:
+            return asyncio.run(self.execute_chain_async(steps, progress_callback))
+
         try:
-            return loop.run_until_complete(self.execute_chain_async(steps, progress_callback))
-        finally:
-            loop.close()
+            asyncio.get_running_loop()
+        except RuntimeError:
+            return _run()
+
+        with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
+            return executor.submit(_run).result()
     
     def _add_to_history(self, result: ChainResult) -> None:
         """Add result to chain history."""

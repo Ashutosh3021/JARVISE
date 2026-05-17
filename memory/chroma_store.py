@@ -6,9 +6,11 @@ Provides persistent vector storage for conversation embeddings using ChromaDB.
 
 from datetime import datetime, timezone
 from typing import Any
+import threading
 
 import chromadb
 from chromadb.config import Settings as ChromaSettings
+from loguru import logger
 from sentence_transformers import SentenceTransformer
 
 
@@ -22,6 +24,7 @@ class VectorStore:
     
     COLLECTION_NAME = "conversations"
     EMBEDDING_MODEL = "all-MiniLM-L6-v2"
+    MAX_DISTANCE = 0.85
     
     def __init__(self, persist_directory: str = "./data/chromadb"):
         """
@@ -34,6 +37,14 @@ class VectorStore:
         self._embedding_model = None
         self._client = None
         self._collection = None
+        threading.Thread(target=self._preload_embedding_model, daemon=True).start()
+
+    def _preload_embedding_model(self) -> None:
+        """Load embedding model in background to avoid first-query latency."""
+        try:
+            _ = self.embedding_model
+        except Exception as e:
+            logger.warning(f"Failed to preload embedding model: {e}")
     
     @property
     def embedding_model(self) -> SentenceTransformer:
@@ -66,6 +77,14 @@ class VectorStore:
             )
         return self._collection
     
+    def _normalize_query(self, query: str) -> str:
+        """Normalize query text before embedding for retrieval."""
+        q = query.strip().lower()
+        for prefix in ("current query:", "user:", "assistant:"):
+            if q.startswith(prefix):
+                q = q.split(":", 1)[-1].strip()
+        return q
+
     def _embed(self, text: str) -> list[float]:
         """
         Generate embeddings for text.
@@ -151,8 +170,8 @@ class VectorStore:
         Returns:
             List of relevant conversation entries with metadata
         """
-        # Generate embedding for the query
-        query_embedding = self._embed(query)
+        normalized_query = self._normalize_query(query)
+        query_embedding = self._embed(normalized_query)
         
         # Build where clause for filtering
         where = {"session_id": session_id} if session_id else None
@@ -169,11 +188,14 @@ class VectorStore:
         context = []
         if results["ids"] and results["ids"][0]:
             for i, entry_id in enumerate(results["ids"][0]):
+                distance = results["distances"][0][i] if results.get("distances") else None
+                if distance is not None and distance > self.MAX_DISTANCE:
+                    continue
                 context.append({
                     "id": entry_id,
                     "document": results["documents"][0][i],
                     "metadata": results["metadatas"][0][i],
-                    "distance": results["distances"][0][i] if "distances" in results else None,
+                    "distance": distance,
                 })
         
         return context
@@ -234,7 +256,9 @@ class VectorStore:
     
     def clear_all(self) -> None:
         """Clear all data from the collection."""
-        self.collection.delete(where={})
+        results = self.collection.get()
+        if results.get("ids"):
+            self.collection.delete(ids=results["ids"])
     
     def get_stats(self) -> dict[str, Any]:
         """

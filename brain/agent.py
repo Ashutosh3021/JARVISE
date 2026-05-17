@@ -48,12 +48,10 @@ class ReActAgent:
         Returns:
             Final response from the agent
         """
-        # Prepend memory context to user input if provided
-        if memory_context:
-            user_input = f"{memory_context}\n\nCurrent query: {user_input}"
-        
+        raw_user_input = user_input
         messages = self.prompt_builder.build(
-            user_input={"role": "user", "content": user_input}
+            user_input={"role": "user", "content": raw_user_input},
+            memory_context=memory_context or "",
         )
         
         # Add tools to the user message (not as a separate system message - 
@@ -125,7 +123,7 @@ class ReActAgent:
                 logger.error(f"Error in ReAct loop: {e}")
                 return f"An error occurred: {str(e)}"
         
-        self.prompt_builder.add_message("user", user_input)
+        self.prompt_builder.add_message("user", raw_user_input)
         self.prompt_builder.add_message("assistant", full_response)
         
         return full_response
@@ -133,18 +131,22 @@ class ReActAgent:
     def stream_run(
         self,
         user_input: str,
+        memory_context: str | None = None,
     ) -> Generator[tuple[str, bool], None, None]:
         """
         Run the ReAct agent with streaming responses.
         
         Args:
             user_input: The user's input text
+            memory_context: Optional memory context for the prompt
             
         Yields:
             Tuples of (token, is_final) where is_final indicates end of response
         """
+        raw_user_input = user_input
         messages = self.prompt_builder.build(
-            user_input={"role": "user", "content": user_input}
+            user_input={"role": "user", "content": raw_user_input},
+            memory_context=memory_context or "",
         )
         
         # Add tools to the user message (not as a separate system message)
@@ -163,8 +165,11 @@ class ReActAgent:
             logger.debug(f"ReAct iteration {iteration + 1}/{self.max_iterations}")
             
             try:
-                response = self.llm.chat(messages)
-                content = response.get("message", {}).get("content", "")
+                content_parts: list[str] = []
+                for chunk in self.llm.stream_chat(messages):
+                    content_parts.append(chunk)
+                    yield chunk, False
+                content = "".join(content_parts)
                 
                 if not content:
                     logger.warning("Empty response from LLM")
@@ -176,21 +181,21 @@ class ReActAgent:
                 
                 if action_name is None:
                     logger.info("No action detected, returning final answer")
-                    yield self._clean_response(content), True
+                    yield "", True
                     break
                 
                 # Check if we've exceeded max tool calls
                 if tool_calls >= max_tool_calls:
                     logger.warning(f"Max tool calls ({max_tool_calls}) reached, requesting final answer")
-                    # Don't clean — content is just Thought:/Action: lines (empty after cleaning).
-                    # Ask LLM for a natural final answer instead.
                     messages.append({"role": "assistant", "content": content})
                     messages.append({"role": "user", "content": "Please give your final answer now without using any more tools."})
-                    final = self.llm.chat(messages)
-                    final_content = final.get("message", {}).get("content", "")
-                    final_content = self._clean_response(final_content)
-                    yield final_content, True
+                    final_parts: list[str] = []
+                    for chunk in self.llm.stream_chat(messages):
+                        final_parts.append(chunk)
+                        yield chunk, False
+                    final_content = self._clean_response("".join(final_parts))
                     full_response = final_content
+                    yield "", True
                     break
                 
                 logger.info(f"Executing tool: {action_name}")
@@ -214,7 +219,7 @@ class ReActAgent:
                 yield f"An error occurred: {str(e)}", True
                 break
         
-        self.prompt_builder.add_message("user", user_input)
+        self.prompt_builder.add_message("user", raw_user_input)
         self.prompt_builder.add_message("assistant", self._clean_response(full_response))
 
     def _clean_response(self, response: str) -> str:
