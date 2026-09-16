@@ -55,7 +55,7 @@ class AudioOutput:
             audio = audio.astype(np.float32)
         
         # Normalize if needed
-        if audio.max() > 1.0:
+        if np.abs(audio).max() > 1.0:
             audio = audio / 32768.0
         
         # Clamp to valid range
@@ -130,6 +130,10 @@ class AudioOutput:
     
     def _resume_playback(self, audio: np.ndarray):
         """Resume playback with new audio."""
+        if self._stream is not None:
+            self._stream.stop()
+            self._stream.close()
+
         self._current_audio = audio
         self._playback_position = 0
         

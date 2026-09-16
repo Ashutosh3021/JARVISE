@@ -1,225 +1,65 @@
 """
-JARVIS API Client
+JARVIS CLI Client — Direct agent access, no server needed.
 """
 
-import asyncio
-import json
-from typing import AsyncGenerator, Optional
+import sys
+from pathlib import Path
+from typing import Optional
 
-import aiohttp
-import websockets
+sys.path.insert(0, str(Path(__file__).parent.parent))
+
+from core.config import load_config
+from core.hardware import detect_hardware
+from brain.agent import ReActAgent
+from brain.router import CommandRouter, RouteType
+from brain.tools import create_tools_registry
+from memory import MemoryManager
 
 
 class JarvisClient:
-    """Client for interacting with JARVIS backend API"""
-    
-    def __init__(self, base_url: Optional[str] = None):
-        # Try to load config for host/port, fallback to defaults
-        try:
-            from core.config import Config
-            config = Config()
-            self.ui_host = config.ui_host
-            self.ui_port = config.ui_port
-        except Exception:
-            self.ui_host = "127.0.0.1"
-            self.ui_port = 8000
-        
-        # Use provided base_url or config-based URL
-        if base_url:
-            self.base_url = base_url.rstrip("/")
+    """Direct client that talks to the agent in-process."""
+
+    def __init__(self):
+        hw = detect_hardware()
+        self.config = load_config(hw.vram_total_mb)
+        self.memory = MemoryManager(self.config)
+        self.tool_registry = create_tools_registry()
+        self.agent = ReActAgent(tool_registry=self.tool_registry)
+        self.router = CommandRouter(tool_registry=self.tool_registry)
+
+    def chat(self, message: str) -> str:
+        memory_context = self.memory.format_context_for_prompt(message)
+
+        route_result = self.router.route(message)
+        if route_result.route_type == RouteType.DIRECT_TOOL:
+            response = self.router.execute_direct(route_result)
+        elif route_result.route_type == RouteType.CHAIN:
+            response = self.router.execute_chain(route_result, message)
         else:
-            self.base_url = f"http://{self.ui_host}:{self.ui_port}"
-        
-        self.ws_url = f"ws://{self.ui_host}:{self.ui_port}/ws/chat"
-        self._session: Optional[aiohttp.ClientSession] = None
-    
-    async def _get_session(self) -> aiohttp.ClientSession:
-        """Get or create aiohttp session"""
-        if self._session is None or self._session.closed:
-            self._session = aiohttp.ClientSession()
-        return self._session
-    
-    async def close(self):
-        """Close the client session"""
-        if self._session and not self._session.closed:
-            await self._session.close()
-    
-    async def chat(self, message: str, stream: bool = False) -> str:
-        """
-        Send a chat message and get response
-        
-        Args:
-            message: Message to send
-            stream: Whether to stream the response
-            
-        Returns:
-            Response from JARVIS
-        """
-        session = await self._get_session()
-        
-        # Use WebSocket for streaming
-        try:
-            async with websockets.connect(self.ws_url) as ws:
-                # Send message
-                await ws.send(json.dumps({
-                    "type": "message",
-                    "content": message
-                }))
-                
-                # Collect response
-                response = ""
-                async for msg in ws:
-                    data = json.loads(msg)
-                    
-                    if data.get("type") == "chunk":
-                        content = data.get("content", "")
-                        print(content, end="", flush=True)
-                        response += content
-                    elif data.get("type") == "done":
-                        break
-                    elif data.get("type") == "error":
-                        raise Exception(data.get("content", "Unknown error"))
-                
-                return response
-                
-        except websockets.exceptions.ConnectionClosed:
-            # Fallback to HTTP if WebSocket fails
-            return await self._chat_http(message)
-        except Exception as e:
-            return await self._chat_http(message)
-    
-    async def _chat_http(self, message: str) -> str:
-        """Fallback HTTP chat"""
-        session = await self._get_session()
-        
-        async with session.post(
-            f"{self.base_url}/api/chat",
-            json={"message": message}
-        ) as resp:
-            if resp.status != 200:
-                return f"Error: HTTP {resp.status}"
-            data = await resp.json()
-            return data.get("response", "")
-    
-    async def chat_stream(self, message: str) -> AsyncGenerator[str, None]:
-        """
-        Stream chat response
-        
-        Yields:
-            Response chunks
-        """
-        session = await self._get_session()
-        
-        async with websockets.connect(self.ws_url) as ws:
-            await ws.send(json.dumps({
-                "type": "message",
-                "content": message
-            }))
-            
-            async for msg in ws:
-                data = json.loads(msg)
-                
-                if data.get("type") == "chunk":
-                    yield data.get("content", "")
-                elif data.get("type") == "done":
-                    break
-                elif data.get("type") == "error":
-                    raise Exception(data.get("content", "Unknown error"))
-    
-    async def get_memories(self, session_id: str = "default", limit: int = 50) -> dict:
-        """Get list of memories"""
-        session = await self._get_session()
-        
-        async with session.get(
-            f"{self.base_url}/api/memory",
-            params={"session_id": session_id, "limit": limit}
-        ) as resp:
-            return await resp.json()
-    
-    async def search_memory(self, query: str, limit: int = 10) -> dict:
-        """Search memories"""
-        session = await self._get_session()
-        
-        async with session.get(
-            f"{self.base_url}/api/memory/search",
-            params={"q": query, "limit": limit}
-        ) as resp:
-            return await resp.json()
-    
-    async def get_memory_stats(self) -> dict:
-        """Get memory statistics"""
-        session = await self._get_session()
-        
-        async with session.get(
-            f"{self.base_url}/api/memory/filtered-stats"
-        ) as resp:
-            return await resp.json()
-    
-    async def clear_memories(self, project: Optional[str] = None) -> dict:
-        """Clear memories"""
-        session = await self._get_session()
-        
-        async with session.post(
-            f"{self.base_url}/api/memory/clear",
-            json={"project": project}
-        ) as resp:
-            return await resp.json()
-    
-    async def get_stats(self) -> dict:
-        """Get system statistics"""
-        session = await self._get_session()
-        
-        async with session.get(
-            f"{self.base_url}/api/stats/current"
-        ) as resp:
-            return await resp.json()
-    
-    async def get_router_stats(self) -> dict:
-        """Get router statistics"""
-        session = await self._get_session()
-        
-        async with session.get(
-            f"{self.base_url}/api/stats/router"
-        ) as resp:
-            return await resp.json()
-    
-    async def get_settings(self) -> dict:
-        """Get settings"""
-        # This would need a settings endpoint
-        # For now, return placeholder
-        return {
-            "message": "Settings endpoint not implemented yet"
-        }
-    
-    async def health_check(self) -> bool:
-        """Check if server is healthy"""
-        try:
-            session = await self._get_session()
-            async with session.get(f"{self.base_url}/health") as resp:
-                return resp.status == 200
-        except:
-            return False
+            response = self.agent.run(message, memory_context=memory_context)
 
+        self.memory.save_conversation(message, response)
+        return response
 
-async def main():
-    """Test the client"""
-    client = JarvisClient()
-    
-    # Check health
-    if await client.health_check():
-        print("✓ Connected to JARVIS server")
-    else:
-        print("✗ Cannot connect to JARVIS server")
-        print("  Start server with: python main.py")
-        return
-    
-    # Test chat
-    print("\nTesting chat...")
-    response = await client.chat("Hello!")
-    print(f"\nResponse: {response}")
-    
-    await client.close()
+    def get_memories(self, limit: int = 50) -> dict:
+        results = self.memory.get_vector_context("recent", n_results=limit)
+        return {"memories": results}
 
+    def search_memory(self, query: str, limit: int = 10) -> dict:
+        results = self.memory.get_vector_context(query, n_results=limit)
+        return {"results": results}
 
-if __name__ == "__main__":
-    asyncio.run(main())
+    def get_memory_stats(self) -> dict:
+        return self.memory.get_stats()
+
+    def clear_memories(self) -> dict:
+        count = self.memory.delete_session("default")
+        return {"deleted": count}
+
+    def get_stats(self) -> dict:
+        from tools.system_monitor import SystemMonitorTool
+        monitor = SystemMonitorTool()
+        return monitor.execute(action="all")
+
+    def health_check(self) -> bool:
+        return True

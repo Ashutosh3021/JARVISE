@@ -262,7 +262,7 @@ class MicrosoftOutlookTool(BaseTool):
             
             if "authentication" in error_msg.lower():
                 suggestion = "Run authenticate() first to authenticate with Microsoft"
-            elif "permission" in error.lower() if hasattr(e, 'lower') else False:
+            elif "permission" in error_msg.lower():
                 suggestion = "Check that the app has Mail.Read permission in Azure Portal"
             else:
                 suggestion = "Verify Microsoft Graph API is accessible"

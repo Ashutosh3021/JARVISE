@@ -76,8 +76,6 @@ class VoicePipeline:
         self._on_transcription: Optional[Callable[[str, float], None]] = None
         self._on_recording_start: Optional[Callable] = None
         self._on_recording_stop: Optional[Callable] = None
-        self._on_speech_start: Optional[Callable] = None
-        self._on_speech_end: Optional[Callable] = None
         self._on_listening_start: Optional[Callable] = None
         self._on_listening_stop: Optional[Callable] = None
         
@@ -280,14 +278,6 @@ class VoicePipeline:
     def on_recording_stop(self, callback: Callable):
         """Set callback for recording stop."""
         self._on_recording_stop = callback
-    
-    def on_speech_start(self, callback: Callable):
-        """Set callback for speech start detection."""
-        self._on_speech_start = callback
-    
-    def on_speech_end(self, callback: Callable):
-        """Set callback for speech end detection."""
-        self._on_speech_end = callback
     
     def on_listening_start(self, callback: Callable):
         """Set callback for pipeline start."""

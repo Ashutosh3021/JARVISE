@@ -1,0 +1,73 @@
+# JARVIS — Feature Roadmap
+# Just A Rather Very Intelligent System
+
+## 1. Voice Pipeline (SST -> TTS)
+- Speech-to-Text via Faster-Whisper (local, offline)
+- Text-to-Speech via Kokoro TTS (local, offline)
+- Push-to-talk with spacebar
+- Voice Activity Detection (WebRTC + energy fallback)
+- Hardware-aware model selection (auto-picks tiny/base/small/medium based on GPU VRAM)
+
+## 2. Knowledge Base — RAG
+- ChromaDB vector store for semantic conversation memory
+- MEMORY.md for persistent human-editable facts
+- Importance scoring to decide what's worth remembering
+- Retrieval-Augmented Generation: inject relevant past conversations into LLM prompts
+- Session-aware memory with vector similarity search
+- Goal: answer questions using latest knowledge, not just what the model was trained on
+
+## 3. Remote Laptop Control
+- Full remote access to laptop when it is powered on
+- Execute commands, manage files, run scripts remotely
+- Eventually controllable from mobile devices (phone/tablet)
+- For now: laptop-to-laptop or laptop-to-terminal control
+- Secure authentication required before any remote session
+
+## 4. Strong Pattern Recognition
+- Command router with exact match, wildcard, fuzzy (Levenshtein) matching
+- Learns from user corrections ("no, I meant open Chrome not Firefox")
+- Preference memory stores learned command-to-tool mappings
+- Multi-step chain detection ("research X and summarize" triggers workflow)
+- Improves accuracy over time as patterns accumulate
+
+## 5. Automation
+- Email management: move promotional邮件 to spam, auto-read and reply to real mail, skip ones needing human decision
+- Job/internship applications: scrape listings matching user domain, auto-apply using GitHub and LinkedIn profile
+- Calendar management: create, update, delete events
+- Web search and content extraction
+- File system operations: read, write, organize
+- Code execution in sandboxed environment
+- System monitoring: CPU, RAM, disk, network
+
+## 6. Personality & Self-Learning
+- Develops a distinct personality over time
+- Learns new things from interactions and corrections
+- Self-correction: suggests improvements to its own code
+- No direct code changes without user approval — suggestions only
+- Remembers user preferences and adapts behavior
+- Stores corrections in preference memory for future reference
+
+## 7. Coding Agent Integration
+- Uses OpenCode and Kilo CLI for coding tasks when needed
+- Can spawn sub-agents via provided APIs for parallel execution
+- Goal: maximum output in minimum tokens and time
+- Delegates research, implementation, and review across agents
+- Integrates with existing tool registry for seamless task routing
+
+## 8. 3D Object Creation & Visualization
+- Create and render .obj and .stl files
+- Libraries: trimesh, numpy-stl, open3d
+- Visualize 3D objects in real-time
+- Live editing: modify objects and see changes immediately
+- Export to standard formats for 3D printing or further processing
+
+## 9. Full Computer Access & Live Screen
+- Browse anything on the computer — files, apps, browser tabs
+- Display processes and activity on live screen
+- Screen capture and sharing
+- Application tracking: detect open/close events
+- System context: active window, running apps, project detection
+- Goal: complete visibility into what is happening on the machine
+
+---
+Last updated: 2026-09-16

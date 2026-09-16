@@ -82,26 +82,6 @@ class Config(BaseSettings):
         description="Human-editable memory file path"
     )
 
-    # UI Configuration
-    ui_host: str = Field(
-        default="127.0.0.1",
-        description="UI server host (use 0.0.0.0 for remote access, requires auth)"
-    )
-    ui_port: int = Field(
-        default=8000,
-        description="UI server port"
-    )
-    
-    # API Authentication
-    api_key: str = Field(
-        default="",
-        description="API key for authenticated endpoints (required for remote access)"
-    )
-    allow_remote_access: bool = Field(
-        default=False,
-        description="Allow remote (non-loopback) access to destructive endpoints"
-    )
-
     # Logging Configuration
     log_level: str = Field(
         default="INFO",
@@ -137,6 +117,8 @@ class Config(BaseSettings):
             raise ConfigValidationError("ollama_host must start with http:// or https://")
         return v
 
+    @field_validator("ollama_model")
+    @classmethod
     def validate_ollama_model(cls, v: str) -> str:
         """Validate Ollama model name format."""
         if not v:
@@ -164,14 +146,6 @@ class Config(BaseSettings):
         """Validate TTS speed is within reasonable bounds."""
         if not 0.5 <= v <= 2.0:
             raise ConfigValidationError("tts_speed must be between 0.5 and 2.0")
-        return v
-
-    @field_validator("ui_port")
-    @classmethod
-    def validate_ui_port(cls, v: int) -> int:
-        """Validate UI port is in valid range."""
-        if not 1024 <= v <= 65535:
-            raise ConfigValidationError("ui_port must be between 1024 and 65535")
         return v
 
     @field_validator("log_level")

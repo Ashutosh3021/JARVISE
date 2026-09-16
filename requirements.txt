@@ -1,11 +1,9 @@
-# JARVIS Requirements
-# Windows AI Voice Assistant
+# JARVIS Requirements — Pure CLI
 
-# Core dependencies
+# Core
 pydantic>=2.0.0
 pydantic-settings>=2.0.0
 python-dotenv>=1.0.0
-pyyaml>=6.0.0
 
 # Hardware detection
 psutil>=5.9.0
@@ -41,13 +39,6 @@ duckduckgo-search>=6.0.0
 requests>=2.31.0
 msal>=1.24.0
 
-# UI
-fastapi>=0.109.0
-uvicorn[standard]>=0.27.0
-websockets>=12.0.0
-python-multipart>=0.0.6
-
 # Utilities
 loguru>=0.7.0
-aiofiles>=23.2.0
 httpx>=0.26.0

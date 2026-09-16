@@ -39,7 +39,6 @@ class AudioRecorder:
         self._audio_buffer: deque = deque(maxlen=self._max_samples)
         self._stream: Optional[sd.InputStream] = None
         self._lock = threading.Lock()
-        self._callback: Optional[Callable] = None
         
         logger.info(f"AudioRecorder initialized: {sample_rate}Hz, {channels}ch, max {max_duration}s")
     
@@ -138,15 +137,6 @@ class AudioRecorder:
     def list_devices(self):
         """List available audio input devices."""
         return sd.query_devices(kind='input')
-    
-    def set_callback(self, callback: Callable):
-        """
-        Set callback for audio data processing.
-        
-        Args:
-            callback: Function called with audio chunk
-        """
-        self._callback = callback
 
 
 if __name__ == "__main__":

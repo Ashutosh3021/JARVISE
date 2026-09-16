@@ -134,8 +134,6 @@ class ToolRegistry:
 
     def __init__(self, use_cache: bool = True, use_retry: bool = True):
         self.tools: dict[str, dict[str, Any]] = {}
-        # BUG-014 fix: Only match Action: toolname or Action: toolname: {json}
-        # Use non-greedy [\s\S]+? to handle multi-line JSON args
         self._action_pattern = re.compile(
             r"^Action:\s*(\w+)(?:\s*:\s*(\{[\s\S]+?\}|\[[\s\S]+?\]))?",
             re.MULTILINE | re.IGNORECASE
@@ -145,13 +143,9 @@ class ToolRegistry:
             re.MULTILINE | re.DOTALL
         )
         
-        # Enable learning components
-        self._use_cache = use_cache
         self._use_retry = use_retry
-        self._cache = None
         self._retry_engine = None
         
-        # Initialize retry engine if enabled
         if self._use_retry:
             self._retry_engine = RetryEngine()
 
@@ -287,16 +281,6 @@ class ToolRegistry:
         """Check if a tool is registered."""
         return name.lower() in self.tools
     
-    def get_cache_stats(self) -> dict | None:
-        """Get tool cache statistics.
-        
-        Returns:
-            Dict with cache stats or None if cache not enabled
-        """
-        if self._cache is None:
-            return None
-        return self._cache.get_stats()
-    
     def get_retry_stats(self) -> dict | None:
         """Get retry engine statistics.
         
@@ -306,26 +290,6 @@ class ToolRegistry:
         if self._retry_engine is None:
             return None
         return self._retry_engine.get_stats()
-    
-    def invalidate_cache(self, tool_name: str = None, args: dict = None) -> int:
-        """Invalidate cache entries.
-        
-        Args:
-            tool_name: Tool to invalidate (None = all)
-            args: Specific args to invalidate
-            
-        Returns:
-            Number of entries invalidated
-        """
-        if self._cache is None:
-            return 0
-        
-        if tool_name is None:
-            self._cache.clear_all()
-            # BUG-013 fix: clear_all() sets _cache to None, return 0 instead of len(None)
-            return 0
-        
-        return self._cache.invalidate(tool_name, args)
 
 
 def create_default_registry() -> ToolRegistry:

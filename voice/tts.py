@@ -128,25 +128,19 @@ class TTSEngine:
 
     def _adjust_speed(self, audio: np.ndarray, speed: float) -> np.ndarray:
         """
-        Adjust audio speed by resampling.
+        Adjust audio speed via time stretching.
         
         Args:
             audio: Input audio
             speed: Speed multiplier (>1 = faster, <1 = slower)
             
         Returns:
-            Speed-adjusted audio
+            Speed-adjusted audio at same sample rate
         """
         if speed == 1.0:
             return audio
         
-        # Speed adjustment via librosa resampling
-        # Higher speed = lower target_sr = fewer samples = faster playback
-        return librosa.resample(
-            audio,
-            orig_sr=24000,
-            target_sr=int(24000 / speed)
-        )
+        return librosa.effects.time_stretch(audio, rate=speed)
     
     def speak_to_file(self, text: str, output_path: str):
         """
