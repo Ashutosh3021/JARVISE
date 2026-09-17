@@ -254,6 +254,85 @@ class VectorStore:
         
         return 0
     
+    def save_filtered_entry(
+        self,
+        entry_id: str,
+        content: str,
+        metadata: dict[str, Any],
+        collection_name: str = "filtered_memories",
+    ) -> None:
+        """Save a filtered memory entry to a separate collection.
+        
+        Used by FilteredMemory to store entries with importance metadata.
+        """
+        try:
+            collection = self.client.get_or_create_collection(
+                name=collection_name,
+                metadata={"hnsw:space": "cosine"}
+            )
+            
+            embedding = self._embed(content)
+            collection.add(
+                ids=[entry_id],
+                embeddings=[embedding],
+                documents=[content],
+                metadatas=[metadata],
+            )
+        except Exception:
+            pass  # best-effort
+    
+    def search_filtered(
+        self,
+        query: str,
+        collection_name: str = "filtered_memories",
+        n_results: int = 10,
+        where: dict | None = None,
+    ) -> list[dict[str, Any]]:
+        """Search the filtered memories collection."""
+        try:
+            collection = self.client.get_or_create_collection(
+                name=collection_name,
+                metadata={"hnsw:space": "cosine"}
+            )
+            
+            embedding = self._embed(query)
+            kwargs = {
+                "query_embeddings": [embedding],
+                "n_results": min(n_results, max(collection.count(), 1)),
+            }
+            if where:
+                kwargs["where"] = where
+            
+            results = collection.query(**kwargs)
+            entries = []
+            if results and results.get("ids") and results["ids"][0]:
+                for i, doc_id in enumerate(results["ids"][0]):
+                    entries.append({
+                        "id": doc_id,
+                        "content": results["documents"][0][i] if results.get("documents") else "",
+                        "metadata": results["metadatas"][0][i] if results.get("metadatas") else {},
+                        "distance": results["distances"][0][i] if results.get("distances") else 0,
+                    })
+            return entries
+        except Exception:
+            return []
+    
+    def delete_filtered_entry(
+        self,
+        entry_id: str,
+        collection_name: str = "filtered_memories",
+    ) -> bool:
+        """Delete a single entry from the filtered collection."""
+        try:
+            collection = self.client.get_or_create_collection(
+                name=collection_name,
+                metadata={"hnsw:space": "cosine"}
+            )
+            collection.delete(ids=[entry_id])
+            return True
+        except Exception:
+            return False
+    
     def clear_all(self) -> None:
         """Clear all data from the collection."""
         results = self.collection.get()

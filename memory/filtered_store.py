@@ -201,7 +201,7 @@ class FilteredMemory:
             self._stats["by_project"][project] = self._stats["by_project"].get(project, 0) + 1
         self._stats["importance_sum"] += importance
         
-        # Also store in ChromaDB if available (full content in documents field)
+        # Also store in ChromaDB if available
         if self._chroma_client:
             try:
                 chroma_metadata = {
@@ -211,11 +211,11 @@ class FilteredMemory:
                     "importance": importance,
                     **metadata,
                 }
-                self._chroma_client.collection.add(
-                    ids=[entry_id],
-                    embeddings=[self._chroma_client._embed(content)],
-                    documents=[content],
-                    metadatas=[chroma_metadata],
+                self._chroma_client.save_filtered_entry(
+                    entry_id=entry_id,
+                    content=content,
+                    metadata=chroma_metadata,
+                    collection_name=self.collection_name,
                 )
             except Exception:
                 pass  # ChromaDB storage is best-effort
