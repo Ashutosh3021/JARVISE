@@ -22,6 +22,7 @@ from brain.router import CommandRouter, RouteType
 from brain.tools import create_tools_registry
 from brain.providers import OllamaProvider, create_cloud_provider
 from brain.hitl import set_confirmation_callback, get_undo_tracker
+from brain.proactive import ProactiveEngine
 from memory import MemoryManager
 
 
@@ -36,8 +37,18 @@ BANNER = r"""
 
 ORANGE = "\033[38;5;208m"
 RESET = "\033[0m"
+DIM = "\033[2m"
 
 PROVIDER_CHOICES = ["groq", "openrouter", "google"]
+
+
+def _show_suggestions(proactive: ProactiveEngine, last_input: str, tools_used: list[str] | None = None):
+    """Show proactive suggestions after a response (subtle, non-intrusive)."""
+    suggestions = proactive.suggest(last_input, tools_used)
+    if suggestions:
+        print(f"\n{DIM}Suggestions:{RESET}")
+        for i, s in enumerate(suggestions[:3], 1):
+            print(f"  {DIM}{i}. {s.text}{RESET}")
 
 
 def _cli_confirmation(message: str, risk_level: str = "yellow") -> bool:
@@ -215,6 +226,10 @@ def run_jarvis(args):
     memory_manager = MemoryManager(config)
     logger.info("Memory initialized")
 
+    logger.info("Initializing proactive engine...")
+    proactive = ProactiveEngine()
+    logger.info("Proactive engine ready")
+
     logger.info("Initializing agent...")
     tool_registry = create_tools_registry()
     agent = ReActAgent(llm_client=llm_provider, tool_registry=tool_registry)
@@ -268,6 +283,15 @@ def run_jarvis(args):
                     if memory_manager:
                         memory_manager.save_conversation(text, response)
 
+                    # Record interaction and show suggestions
+                    tools_used = []
+                    if router:
+                        route_result = router.route(text)
+                        if route_result.tool_name:
+                            tools_used = [route_result.tool_name]
+                    proactive.record_interaction(text, tools_used)
+                    _show_suggestions(proactive, text, tools_used)
+
                     voice_pipeline.speak_async(response)
                 except Exception as e:
                     logger.error(f"Error processing voice input: {e}")
@@ -289,14 +313,22 @@ def run_jarvis(args):
             if not user_input:
                 continue
 
+            # On-demand suggestions
+            if user_input.lower() in ['suggest', 'suggestions', 'what should i do']:
+                _show_suggestions(proactive, "")
+                continue
+
             memory_context = memory_manager.format_context_for_prompt(user_input) if memory_manager else None
             logger.info(f"{ORANGE}User: {user_input}{RESET}")
 
+            tools_used = []
             if router:
                 route_result = router.route(user_input)
                 if route_result.route_type == RouteType.DIRECT_TOOL:
                     logger.info(f"Direct tool execution: {route_result.tool_name}")
                     response = router.execute_direct(route_result)
+                    if route_result.tool_name:
+                        tools_used = [route_result.tool_name]
                 elif route_result.route_type == RouteType.CHAIN:
                     response = router.execute_chain(route_result, user_input)
                 else:
@@ -308,6 +340,10 @@ def run_jarvis(args):
 
             if memory_manager:
                 memory_manager.save_conversation(user_input, response)
+
+            # Record interaction and show suggestions
+            proactive.record_interaction(user_input, tools_used)
+            _show_suggestions(proactive, user_input, tools_used)
 
         except KeyboardInterrupt:
             break
