@@ -318,6 +318,32 @@ def run_jarvis(args):
                 _show_suggestions(proactive, "")
                 continue
 
+            # Email triage shortcut
+            if user_input.lower() in ['triage', 'check email', 'emails']:
+                print(f"\n{ORANGE}Email Triage:{RESET}")
+                result = tool_registry.execute("calendar_email", {"action": "status"})
+                print(result)
+                continue
+
+            # Calendar shortcuts
+            if user_input.lower() in ['conflicts', 'check conflicts']:
+                print(f"\n{ORANGE}Calendar Conflicts:{RESET}")
+                result = tool_registry.execute("calendar_email", {
+                    "action": "check_conflicts",
+                    "events": [],
+                })
+                print(result)
+                continue
+
+            if user_input.lower() in ['suggest times', 'meeting times', 'available times']:
+                print(f"\n{ORANGE}Suggested Meeting Times:{RESET}")
+                result = tool_registry.execute("calendar_email", {
+                    "action": "suggest_times",
+                    "events": [],
+                })
+                print(result)
+                continue
+
             memory_context = memory_manager.format_context_for_prompt(user_input) if memory_manager else None
             logger.info(f"{ORANGE}User: {user_input}{RESET}")
 

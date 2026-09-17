@@ -547,13 +547,52 @@ def create_tools_registry() -> ToolRegistry:
             from tools.browser import BrowserTool
             _browser = BrowserTool()
         action = args.get("action", "navigate")
-        url = args.get("url", "")
-        return _browser.execute(action=action, url=url)
+        # Pass all kwargs except action
+        clean_args = {k: v for k, v in args.items() if k != "action"}
+        return _browser.execute(action=action, **clean_args)
     
     registry.register(
         "browser",
         execute_browser,
-        "Navigate to URLs, extract content, fill forms, click elements",
+        "Browser automation: navigate, extract, click, fill, screenshot, tabs",
+        risk_level=RiskLevel.GREEN,
+    )
+    
+    # Register research workflow tool
+    def execute_research(args: dict) -> str:
+        """Execute multi-step research workflow."""
+        global _browser
+        if _browser is None:
+            from tools.browser import BrowserTool
+            _browser = BrowserTool()
+        
+        from brain.research import ResearchWorkflow
+        workflow = ResearchWorkflow(browser_tool=_browser)
+        
+        action = args.get("action", "research")
+        
+        if action == "research":
+            query = args.get("query", "")
+            if not query:
+                return "Error: 'query' required"
+            max_sources = args.get("max_sources", 3)
+            engine = args.get("engine", "duckduckgo")
+            result = workflow.research(query, max_sources=max_sources, engine=engine)
+            return result.format_with_citations()
+        
+        elif action == "quick":
+            query = args.get("query", "")
+            if not query:
+                return "Error: 'query' required"
+            return workflow.quick_research(query)
+        
+        else:
+            return f"Unknown research action: {action}. Use 'research' or 'quick'"
+    
+    registry.register(
+        "research",
+        execute_research,
+        "Multi-step research: search, extract sources, compile with citations",
         risk_level=RiskLevel.GREEN,
     )
     
@@ -609,44 +648,76 @@ def create_tools_registry() -> ToolRegistry:
         risk_level=RiskLevel.YELLOW,
     )
     
-    # Register code execution tool ONLY if explicitly enabled
-    _code_exec_enabled = os.getenv("ENABLE_CODE_EXEC", "false").lower() == "true"
+    # Register code execution sandbox
+    _sandbox = None
     
-    if _code_exec_enabled:
-        def execute_code(args: dict) -> str:
-            """Execute Python code."""
-            global _code_exec
-            if _code_exec is None:
-                from tools.code_exec import CodeExecutionTool
-                _code_exec = CodeExecutionTool()
+    def execute_code(args: dict) -> str:
+        """Execute code in sandbox."""
+        nonlocal _sandbox
+        if _sandbox is None:
+            from brain.sandbox import CodeSandbox
+            _sandbox = CodeSandbox()
+        
+        action = args.get("action", "python")
+        confirm = args.get("confirm", False)
+        
+        if action == "python":
             code = args.get("code", "")
-            # Add confirmation prompt requirement
-            confirm = args.get("confirm", False)
-            if not confirm:
-                return "Error: Code execution requires confirmation. Add 'confirm': true to args."
-            result = _code_exec.execute(code=code)
-            # Format result as string for tool output
-            if result.get("status") == "error":
-                return f"Error: {result.get('error', 'Unknown error')}"
-            return result.get("output", "")
+            if not code:
+                return "Error: 'code' required"
+            result = _sandbox.run_python(code, confirm=confirm)
+        elif action == "shell":
+            command = args.get("command", "")
+            if not command:
+                return "Error: 'command' required"
+            result = _sandbox.run_shell(command, confirm=confirm)
+        elif action == "install":
+            package = args.get("package", "")
+            if not package:
+                return "Error: 'package' required"
+            result = _sandbox.install_package(package, confirm=confirm)
+        elif action == "diff":
+            file_path = args.get("file_path", "")
+            new_content = args.get("new_content", "")
+            if not file_path or not new_content:
+                return "Error: 'file_path' and 'new_content' required"
+            preview = _sandbox.preview_diff(file_path, new_content)
+            return json.dumps(preview.to_dict(), indent=2)
+        elif action == "apply":
+            file_path = args.get("file_path", "")
+            new_content = args.get("new_content", "")
+            if not file_path or not new_content:
+                return "Error: 'file_path' and 'new_content' required"
+            preview = _sandbox.preview_diff(file_path, new_content)
+            result = _sandbox.apply_diff(preview, confirm=confirm)
+        elif action == "history":
+            limit = args.get("limit", 10)
+            records = _sandbox.get_history(limit)
+            return json.dumps(records, indent=2)
+        elif action == "replay":
+            record_id = args.get("record_id", "")
+            if not record_id:
+                return "Error: 'record_id' required"
+            result = _sandbox.replay(record_id, confirm=confirm)
+        elif action == "packages":
+            pkgs = _sandbox.get_installed_packages()
+            return "Installed: " + ", ".join(pkgs) if pkgs else "No packages installed"
+        else:
+            return f"Unknown action: {action}. Use: python, shell, install, diff, apply, history, replay, packages"
         
-        registry.register(
-            "execute_code",
-            execute_code,
-            "Run Python code in sandboxed environment (requires ENABLE_CODE_EXEC=true in .env)",
-            risk_level=RiskLevel.RED,
-        )
-    else:
-        # Register a stub that explains it's disabled
-        def execute_code_disabled(args: dict) -> str:
-            return "Error: Code execution is disabled. Set ENABLE_CODE_EXEC=true in .env to enable."
-        
-        registry.register(
-            "execute_code",
-            execute_code_disabled,
-            "Code execution disabled - requires ENABLE_CODE_EXEC=true in .env",
-            risk_level=RiskLevel.RED,
-        )
+        # Format result
+        if result.get("status") == "error":
+            return f"Error: {result.get('error', 'Unknown error')}"
+        output = result.get("output", "")
+        duration = result.get("duration_ms", 0)
+        return f"{output}\n({duration:.0f}ms)" if duration else output
+    
+    registry.register(
+        "execute_code",
+        execute_code,
+        "Sandboxed code execution: python, shell, pip install, diff preview, history",
+        risk_level=RiskLevel.RED,
+    )
     
     # Register Google Calendar tool
     def execute_calendar(args: dict) -> str:
@@ -775,6 +846,87 @@ def create_tools_registry() -> ToolRegistry:
     registry.register("recall", recall, "Recall a remembered item by key")
     registry.register("list_memories", list_memories, "List all remembered items")
     registry.register("forget", forget, "Forget a specific memory")
+    
+    # === CALENDAR & EMAIL ORCHESTRATOR ===
+    
+    _cal_email_orchestrator = None
+    
+    def execute_calendar_email(args: dict) -> str:
+        """Execute calendar/email orchestrator action."""
+        nonlocal _cal_email_orchestrator
+        if _cal_email_orchestrator is None:
+            from brain.calendar_email import CalendarEmailOrchestrator
+            _cal_email_orchestrator = CalendarEmailOrchestrator()
+        
+        action = args.get("action", "status")
+        
+        if action == "triage_emails":
+            messages = args.get("messages", [])
+            if not messages:
+                return "Error: 'messages' list required for triage"
+            result = _cal_email_orchestrator.triage_emails(messages)
+            lines = []
+            for priority, items in result.items():
+                if items:
+                    lines.append(f"\n{priority.upper()} ({len(items)}):")
+                    for item in items:
+                        lines.append(f"  - {item.subject} (from: {item.sender})")
+                        lines.append(f"    Reason: {item.reason}")
+            return "\n".join(lines) if lines else "No emails to triage"
+        
+        elif action == "draft_reply":
+            to = args.get("to", "")
+            subject = args.get("subject", "")
+            context = args.get("context", "")
+            tone = args.get("tone", "professional")
+            if not all([to, subject, context]):
+                return "Error: 'to', 'subject', and 'context' required"
+            draft = _cal_email_orchestrator.draft_reply(to, subject, context, tone)
+            return (
+                f"Draft created (pending approval):\n"
+                f"To: {draft.to}\n"
+                f"Subject: {draft.subject}\n"
+                f"Body:\n{draft.body}"
+            )
+        
+        elif action == "check_conflicts":
+            events = args.get("events", [])
+            new_event = args.get("new_event")
+            conflicts = _cal_email_orchestrator.check_calendar_conflicts(events, new_event)
+            if not conflicts:
+                return "No conflicts found"
+            lines = ["Conflicts detected:"]
+            for c in conflicts:
+                lines.append(f"  - {c.suggestion}")
+            return "\n".join(lines)
+        
+        elif action == "suggest_times":
+            events = args.get("events", [])
+            duration = args.get("duration_minutes", 60)
+            slots = _cal_email_orchestrator.suggest_meeting_times(events, duration)
+            if not slots:
+                return "No available slots found in the next 3 days"
+            lines = ["Suggested meeting times:"]
+            for s in slots:
+                lines.append(f"  - {s['day']} at {s['time']}")
+            return "\n".join(lines)
+        
+        elif action == "status":
+            drafts = _cal_email_orchestrator.get_pending_drafts()
+            return (
+                f"Calendar/Email Orchestrator Status:\n"
+                f"  Pending drafts: {len(drafts)}"
+            )
+        
+        else:
+            return f"Unknown action: {action}. Use: triage_emails, draft_reply, check_conflicts, suggest_times, status"
+    
+    registry.register(
+        "calendar_email",
+        execute_calendar_email,
+        "Calendar & email orchestrator: triage emails, draft replies, check conflicts, suggest meeting times",
+        risk_level=RiskLevel.YELLOW,
+    )
     
     return registry
 
