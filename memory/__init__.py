@@ -6,7 +6,11 @@ Provides persistent memory storage using:
 - MEMORY.md file for human-editable persistent information
 """
 
-from memory.chroma_store import VectorStore
+try:
+    from memory.chroma_store import VectorStore
+except ImportError:
+    VectorStore = None
+
 from memory.memory_file import MemoryFileController
 from memory.MemoryManager import MemoryManager
 

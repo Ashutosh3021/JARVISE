@@ -9,7 +9,11 @@ from typing import Any
 
 from core.config import Config
 
-from memory.chroma_store import VectorStore
+try:
+    from memory.chroma_store import VectorStore
+except ImportError:
+    VectorStore = None
+
 from memory.filtered_store import FilteredMemory, MemoryFilter
 from memory.importance import MemoryEntryType
 from memory.memory_file import MemoryFileController

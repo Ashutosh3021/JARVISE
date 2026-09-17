@@ -39,13 +39,10 @@ env/
 *.swo
 
 # Data folders - ignore completely
-data/
 creds/
 
 # Models (downloadable)
 models/
-*.bin
-*.onnx
 
 # OS
 .DS_Store

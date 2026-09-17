@@ -10,7 +10,11 @@ from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from typing import Any, Optional
 
-from memory.chroma_store import VectorStore
+try:
+    from memory.chroma_store import VectorStore
+except ImportError:
+    VectorStore = None
+
 from memory.importance import ImportanceScorer, MemoryEntryType
 
 

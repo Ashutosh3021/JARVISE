@@ -1,73 +1,148 @@
 # JARVIS — Feature Roadmap
 # Just A Rather Very Intelligent System
 
-## 1. Voice Pipeline (SST -> TTS)
+## 0. Core Principle
+- Automate the boring, ask about the important, never act on the irreversible without explicit consent.
+- Every action falls into a tier: Green (auto), Yellow (confirm), Red (explicit approval + 2FA).
+- The assistant must know what it does not know, and ask instead of guessing.
+
+## 1. Voice & Interaction Layer
 - Speech-to-Text via Faster-Whisper (local, offline)
 - Text-to-Speech via Kokoro TTS (local, offline)
 - Push-to-talk with spacebar
+- Wake word detection ("Hey JARVIS")
 - Voice Activity Detection (WebRTC + energy fallback)
+- Text chat fallback for noisy environments or long inputs
+- Confirmation prompts: repeat back what was understood before critical actions
+- Interrupt handling: user can say "stop" mid-task
 - Hardware-aware model selection (auto-picks tiny/base/small/medium based on GPU VRAM)
 
-## 2. Knowledge Base — RAG
-- ChromaDB vector store for semantic conversation memory
+## 2. Human-in-the-Loop (HITL) Decision Engine
+- Three-tier action classification:
+  - Green: read-only, reversible, low-risk (search, read, summarize) → auto-execute + log
+  - Yellow: writes, sends, deletes, spends, publishes → ask for confirmation with clear summary
+  - Red: irreversible, financial, legal, reputation → require explicit approval + 2FA
+- Confidence scoring: if confidence < threshold, ask instead of act
+- Ambiguity detection: "Did you mean Chrome or Firefox?" style clarification
+- Decision queue: batch non-urgent questions so user is not interrupted constantly
+- Approval UI: dashboard showing pending decisions with context, risk level, suggested action
+- Audit log: every auto-action and approval recorded with timestamp + reasoning
+- Undo window: grace period before Yellow actions become permanent
+- Explainability: assistant can tell the user WHY it chose an action
+
+## 3. Knowledge Base & Memory — RAG
+- ChromaDB / Qdrant / LanceDB vector store for semantic memory
 - MEMORY.md for persistent human-editable facts
-- Importance scoring to decide what's worth remembering
-- Retrieval-Augmented Generation: inject relevant past conversations into LLM prompts
+- Importance scoring to decide what is worth remembering
+- Retrieval-Augmented Generation: inject relevant past context into LLM prompts
 - Session-aware memory with vector similarity search
+- Preference memory: learned command-to-tool mappings, habits, tone preferences
+- Correction memory: "No, I meant X" stored and applied next time
+- Forgetting mechanism: stale or contradicted facts get pruned
 - Goal: answer questions using latest knowledge, not just what the model was trained on
 
-## 3. Remote Laptop Control
-- Full remote access to laptop when it is powered on
-- Execute commands, manage files, run scripts remotely
-- Eventually controllable from mobile devices (phone/tablet)
-- For now: laptop-to-laptop or laptop-to-terminal control
-- Secure authentication required before any remote session
+## 4. Automation Modules (Each with HITL Gates)
 
-## 4. Strong Pattern Recognition
+### Email
+- Triage: auto-archive promotions, flag real mail
+- Draft replies automatically → ask before sending unless sender is whitelisted
+- Escalate ambiguous emails to user with suggested response
+- Never send on behalf of user without approval (unless pre-authorized rule)
+
+### Calendar
+- Create, update, delete events
+- Detect conflicts → ask which to prioritize
+- Suggest meeting times based on user's focus blocks
+- Confirm before sending invites to other people
+
+### Job / Internship Applications
+- Scrape listings matching user domain
+- Pre-fill applications using GitHub and LinkedIn profile
+- Pause before submit: show user the filled form for review
+- Track application status and follow-ups
+- Never auto-accept offers or sign anything
+
+### Web & Research
+- Web search and content extraction
+- Multi-step chain detection ("research X and summarize" triggers workflow)
+- Cite sources
+- Ask which sources to trust if conflicting
+
+### File System
+- Read, write, organize, rename
+- Move/delete requires confirmation unless in designated sandbox folder
+- Versioning / trash before permanent delete
+
+### Code Execution
+- Sandboxed environment (Docker / WASM)
+- Ask before running anything that touches network, filesystem outside sandbox, or spends money
+- Show diff before applying code changes
+
+### System Monitoring
+- CPU, RAM, disk, network monitoring
+- Alert on anomalies
+- Ask before killing processes or restarting services
+
+## 5. Remote Control & Cross-Device
+- Full remote access to laptop when powered on
+- Execute commands, manage files, run scripts remotely
+- Mobile control (phone/tablet) eventually
+- Secure authentication required before any remote session (2FA, device pairing)
+- Session recording for audit
+- Kill switch: user can revoke access instantly
+
+## 6. Pattern Recognition & Learning
 - Command router with exact match, wildcard, fuzzy (Levenshtein) matching
 - Learns from user corrections ("no, I meant open Chrome not Firefox")
 - Preference memory stores learned command-to-tool mappings
-- Multi-step chain detection ("research X and summarize" triggers workflow)
+- Multi-step chain detection
+- Confidence threshold: below it, ask instead of act
 - Improves accuracy over time as patterns accumulate
 
-## 5. Automation
-- Email management: move promotional邮件 to spam, auto-read and reply to real mail, skip ones needing human decision
-- Job/internship applications: scrape listings matching user domain, auto-apply using GitHub and LinkedIn profile
-- Calendar management: create, update, delete events
-- Web search and content extraction
-- File system operations: read, write, organize
-- Code execution in sandboxed environment
-- System monitoring: CPU, RAM, disk, network
-
-## 6. Personality & Self-Learning
+## 7. Personality & Self-Learning
 - Develops a distinct personality over time
 - Learns new things from interactions and corrections
 - Self-correction: suggests improvements to its own code
 - No direct code changes without user approval — suggestions only
 - Remembers user preferences and adapts behavior
 - Stores corrections in preference memory for future reference
+- Mood/urgency awareness: knows when to be brief vs. detailed
 
-## 7. Coding Agent Integration
+## 8. Coding Agent Integration
 - Uses OpenCode and Kilo CLI for coding tasks when needed
 - Can spawn sub-agents via provided APIs for parallel execution
 - Goal: maximum output in minimum tokens and time
 - Delegates research, implementation, and review across agents
 - Integrates with existing tool registry for seamless task routing
+- Human review gate before merging code or deploying
+- Token/time budget per task, with alerts when exceeded
 
-## 8. 3D Object Creation & Visualization
+## 9. 3D Object Creation & Visualization
 - Create and render .obj and .stl files
 - Libraries: trimesh, numpy-stl, open3d
 - Visualize 3D objects in real-time
 - Live editing: modify objects and see changes immediately
 - Export to standard formats for 3D printing or further processing
+- Ask before overwriting existing models
 
-## 9. Full Computer Access & Live Screen
+## 10. Full Computer Access & Live Screen
 - Browse anything on the computer — files, apps, browser tabs
 - Display processes and activity on live screen
 - Screen capture and sharing
 - Application tracking: detect open/close events
 - System context: active window, running apps, project detection
+- Privacy mode: user can pause observation
+- Sensitive app exclusion: banking, password managers, private chats
 - Goal: complete visibility into what is happening on the machine
+
+## 11. Trust, Safety & Governance
+- Permission scopes: assistant only has access to what user grants
+- Rate limiting: prevents runaway automation
+- Spend limits: if it can spend money, cap it
+- Emergency stop: one command kills all automation
+- Transparency dashboard: what it did, what it is waiting on, what it learned
+- User override: always
+- Regular permission review: "You haven't used X in 30 days, revoke?"
 
 ---
 Last updated: 2026-09-16

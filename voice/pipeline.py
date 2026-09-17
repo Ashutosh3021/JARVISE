@@ -224,6 +224,12 @@ class VoicePipeline:
             if text and text.strip():
                 logger.info(f"Transcribed: '{text}' (confidence: {confidence:.2f})")
                 
+                # Check for interrupt commands
+                if self._is_interrupt_command(text):
+                    logger.info("Interrupt detected — stopping speech")
+                    self.stop_speaking()
+                    return
+                
                 if self._on_transcription:
                     self._on_transcription(text, confidence)
             else:
@@ -231,6 +237,12 @@ class VoicePipeline:
                 
         except Exception as e:
             logger.error(f"Transcription error: {e}")
+    
+    def _is_interrupt_command(self, text: str) -> bool:
+        """Check if transcribed text is an interrupt command."""
+        STOP_KEYWORDS = {"stop", "cancel", "shut up", "quiet", "silence", "enough", "never mind", "nevermind"}
+        words = text.strip().lower().split()
+        return len(words) <= 3 and any(w in STOP_KEYWORDS for w in words)
     
     def speak(self, text: str, wait: bool = True):
         """

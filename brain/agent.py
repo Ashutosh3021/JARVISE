@@ -9,7 +9,7 @@ from typing import Generator, Callable
 
 from loguru import logger
 
-from brain.client import OllamaClient, OllamaConnectionError
+from brain.providers.base import LLMProvider
 from brain.prompt_builder import PromptBuilder
 from brain.tools import ToolRegistry, ToolExecutionError
 
@@ -21,12 +21,15 @@ class ReActAgent:
 
     def __init__(
         self,
-        llm_client: OllamaClient | None = None,
+        llm_client: LLMProvider | None = None,
         tool_registry: ToolRegistry | None = None,
         prompt_builder: PromptBuilder | None = None,
         max_iterations: int = MAX_ITERATIONS,
     ):
-        self.llm = llm_client or OllamaClient()
+        if llm_client is None:
+            from brain.providers.ollama import OllamaProvider
+            llm_client = OllamaProvider()
+        self.llm = llm_client
         self.tools = tool_registry or ToolRegistry()
         self.prompt_builder = prompt_builder or PromptBuilder()
         self.max_iterations = max_iterations
@@ -115,10 +118,6 @@ class ReActAgent:
                 logger.info(f"Tool executed, continuing with observation")
                 continue
                 
-            except OllamaConnectionError as e:
-                error_msg = f"Connection error: {str(e)}"
-                logger.error(error_msg)
-                return f"Sorry, I'm having trouble connecting to the language model. {error_msg}"
             except Exception as e:
                 logger.error(f"Error in ReAct loop: {e}")
                 return f"An error occurred: {str(e)}"
@@ -209,11 +208,6 @@ class ReActAgent:
                 logger.info(f"Tool executed, continuing with observation")
                 continue
                 
-            except OllamaConnectionError as e:
-                error_msg = f"Connection error: {str(e)}"
-                logger.error(error_msg)
-                yield f"Sorry, I'm having trouble connecting to the language model. {error_msg}", True
-                break
             except Exception as e:
                 logger.error(f"Error in ReAct loop: {e}")
                 yield f"An error occurred: {str(e)}", True
