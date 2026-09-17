@@ -928,6 +928,278 @@ def create_tools_registry() -> ToolRegistry:
         risk_level=RiskLevel.YELLOW,
     )
     
+    # === MULTI-AGENT COLLABORATION ===
+    
+    _multi_agent_llm = None
+    
+    def execute_multi_agent(args: dict) -> str:
+        """Execute multi-agent collaboration."""
+        nonlocal _multi_agent_llm
+        if _multi_agent_llm is None:
+            _multi_agent_llm = OllamaProvider()
+        
+        from brain.multi_agent import (
+            MultiAgentOrchestrator, AgentTask, AgentRole,
+        )
+        
+        orchestrator = MultiAgentOrchestrator(llm_client=_multi_agent_llm)
+        action = args.get("action", "parallel")
+        
+        if action == "parallel":
+            tasks_data = args.get("tasks", [])
+            if not tasks_data:
+                return "Error: 'tasks' list required"
+            
+            tasks = []
+            for t in tasks_data:
+                role_str = t.get("role", "general")
+                try:
+                    role = AgentRole(role_str)
+                except ValueError:
+                    role = AgentRole.GENERAL
+                tasks.append(AgentTask(
+                    id=t.get("id", f"task_{len(tasks)}"),
+                    description=t.get("description", "task"),
+                    role=role,
+                    prompt=t.get("prompt", ""),
+                    timeout_seconds=t.get("timeout", 60),
+                    max_tokens=t.get("max_tokens", 2000),
+                ))
+            
+            results = orchestrator.run_parallel(tasks)
+            lines = ["Parallel execution results:"]
+            for r in results:
+                status = "OK" if r.success else "FAILED"
+                lines.append(f"  [{r.role.value}] {r.task_id}: {status} ({r.duration_ms:.0f}ms)")
+                if r.output:
+                    lines.append(f"    {r.output[:200]}")
+                if r.error:
+                    lines.append(f"    Error: {r.error}")
+            return "\n".join(lines)
+        
+        elif action == "sequential":
+            tasks_data = args.get("tasks", [])
+            if not tasks_data:
+                return "Error: 'tasks' list required"
+            
+            tasks = []
+            for t in tasks_data:
+                role_str = t.get("role", "general")
+                try:
+                    role = AgentRole(role_str)
+                except ValueError:
+                    role = AgentRole.GENERAL
+                tasks.append(AgentTask(
+                    id=t.get("id", f"task_{len(tasks)}"),
+                    description=t.get("description", "task"),
+                    role=role,
+                    prompt=t.get("prompt", ""),
+                    timeout_seconds=t.get("timeout", 60),
+                    max_tokens=t.get("max_tokens", 2000),
+                ))
+            
+            results = orchestrator.run_sequential(tasks)
+            lines = ["Sequential execution results:"]
+            for i, r in enumerate(results):
+                status = "OK" if r.success else "FAILED"
+                lines.append(f"  {i+1}. [{r.role.value}] {r.task_id}: {status} ({r.duration_ms:.0f}ms)")
+                if r.output:
+                    lines.append(f"    {r.output[:200]}")
+            return "\n".join(lines)
+        
+        elif action == "pipeline":
+            # Full dev pipeline: research → plan → code → review
+            goal = args.get("goal", "")
+            if not goal:
+                return "Error: 'goal' required for pipeline"
+            
+            research = AgentTask(
+                id="research", description="Research",
+                role=AgentRole.RESEARCHER,
+                prompt=f"Research the following and provide findings with sources:\n{goal}",
+            )
+            plan = AgentTask(
+                id="plan", description="Plan",
+                role=AgentRole.PLANNER,
+                prompt=f"Based on the research, create a step-by-step plan for:\n{goal}",
+            )
+            code = AgentTask(
+                id="code", description="Implement",
+                role=AgentRole.CODER,
+                prompt=f"Implement the following:\n{goal}",
+            )
+            review = AgentTask(
+                id="review", description="Review",
+                role=AgentRole.REVIEWER,
+                prompt=f"Review the implementation for quality and issues:\n{goal}",
+            )
+            
+            results = orchestrator.run_pipeline(
+                research_task=research,
+                plan_task=plan,
+                code_task=code,
+                review_task=review,
+            )
+            
+            lines = ["Pipeline results:"]
+            for r in results:
+                status = "OK" if r.success else "FAILED"
+                lines.append(f"  [{r.role.value}] {status} ({r.duration_ms:.0f}ms)")
+                if r.output:
+                    lines.append(f"    {r.output[:300]}")
+            return "\n".join(lines)
+        
+        elif action == "stats":
+            stats = orchestrator.get_stats()
+            return json.dumps(stats, indent=2)
+        
+        else:
+            return f"Unknown action: {action}. Use: parallel, sequential, pipeline, stats"
+    
+    registry.register(
+        "multi_agent",
+        execute_multi_agent,
+        "Multi-agent collaboration: spawn sub-agents for parallel/sequential/pipeline execution",
+        risk_level=RiskLevel.YELLOW,
+    )
+    
+    # === TASK PLANNER ===
+    
+    _planner = None
+    
+    def execute_planner(args: dict) -> str:
+        """Execute task planner action."""
+        nonlocal _planner
+        if _planner is None:
+            from brain.planner import TaskPlanner
+            _planner = TaskPlanner()
+        
+        action = args.get("action", "status")
+        
+        if action == "create":
+            goal = args.get("goal", "")
+            tasks = args.get("tasks", [])
+            if not goal or not tasks:
+                return "Error: 'goal' and 'tasks' required"
+            plan = _planner.create_plan(goal, tasks)
+            return f"Plan created: {plan.id} ({len(plan.tasks)} tasks)"
+        
+        elif action == "decompose":
+            goal = args.get("goal", "")
+            steps = args.get("steps", [])
+            if not goal or not steps:
+                return "Error: 'goal' and 'steps' required"
+            plan = _planner.decompose_goal(goal, steps)
+            return f"Decomposed into {len(plan.tasks)} tasks: {plan.id}"
+        
+        elif action == "start":
+            plan_id = args.get("plan_id", "")
+            task_id = args.get("task_id", "")
+            if not plan_id or not task_id:
+                return "Error: 'plan_id' and 'task_id' required"
+            task = _planner.start_task(plan_id, task_id)
+            if task:
+                return f"Started: {task.title}"
+            return "Task not found or not pending"
+        
+        elif action == "complete":
+            plan_id = args.get("plan_id", "")
+            task_id = args.get("task_id", "")
+            result = args.get("result", "")
+            if not plan_id or not task_id:
+                return "Error: 'plan_id' and 'task_id' required"
+            task = _planner.complete_task(plan_id, task_id, result)
+            if task:
+                return f"Completed: {task.title}"
+            return "Task not found"
+        
+        elif action == "fail":
+            plan_id = args.get("plan_id", "")
+            task_id = args.get("task_id", "")
+            error = args.get("error", "")
+            if not plan_id or not task_id:
+                return "Error: 'plan_id' and 'task_id' required"
+            task = _planner.fail_task(plan_id, task_id, error)
+            if task:
+                return f"Failed: {task.title}"
+            return "Task not found"
+        
+        elif action == "skip":
+            plan_id = args.get("plan_id", "")
+            task_id = args.get("task_id", "")
+            if not plan_id or not task_id:
+                return "Error: 'plan_id' and 'task_id' required"
+            task = _planner.skip_task(plan_id, task_id)
+            if task:
+                return f"Skipped: {task.title}"
+            return "Task not found"
+        
+        elif action == "next":
+            plan_id = args.get("plan_id", "")
+            if not plan_id:
+                return "Error: 'plan_id' required"
+            plan = _planner.get_plan(plan_id)
+            if not plan:
+                return f"Plan not found: {plan_id}"
+            task = plan.get_ready_task()
+            if task:
+                return f"Next task: {task.id} - {task.title} (priority: {task.priority.value})"
+            if plan.completed:
+                return "Plan completed!"
+            return "No tasks ready (dependencies pending or all done)"
+        
+        elif action == "status":
+            plan_id = args.get("plan_id", "")
+            if plan_id:
+                plan = _planner.get_plan(plan_id)
+                if plan:
+                    return plan.format_status()
+                return f"Plan not found: {plan_id}"
+            plans = _planner.list_plans()
+            if not plans:
+                return "No plans"
+            lines = ["Plans:"]
+            for p in plans:
+                lines.append(f"  {p['id']}: {p['goal'][:40]} ({p['progress']})")
+            return "\n".join(lines)
+        
+        elif action == "replan":
+            plan_id = args.get("plan_id", "")
+            new_tasks = args.get("new_tasks", [])
+            if not plan_id or not new_tasks:
+                return "Error: 'plan_id' and 'new_tasks' required"
+            plan = _planner.replan(plan_id, new_tasks)
+            if plan:
+                return f"Replanned: added {len(new_tasks)} tasks (total: {len(plan.tasks)})"
+            return "Plan not found"
+        
+        elif action == "list":
+            plans = _planner.list_plans()
+            if not plans:
+                return "No plans"
+            return json.dumps(plans, indent=2)
+        
+        elif action == "delete":
+            plan_id = args.get("plan_id", "")
+            if not plan_id:
+                return "Error: 'plan_id' required"
+            if _planner.delete_plan(plan_id):
+                return f"Deleted plan: {plan_id}"
+            return "Plan not found"
+        
+        elif action == "stats":
+            return json.dumps(_planner.get_stats(), indent=2)
+        
+        else:
+            return f"Unknown action: {action}. Use: create, decompose, start, complete, fail, skip, next, status, replan, list, delete, stats"
+    
+    registry.register(
+        "planner",
+        execute_planner,
+        "Task planning & goal decomposition: create plans, track progress, manage dependencies",
+        risk_level=RiskLevel.GREEN,
+    )
+    
     return registry
 
 
