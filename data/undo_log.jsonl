@@ -1,0 +1,1 @@
+{"undo_id": "47096b3e", "tool_name": "filesystem", "action": "write_file", "timestamp": 1789661136.2082307, "snapshot": {"path": "/tmp/test.txt", "old_content": "hello"}, "description": "Write to test file"}

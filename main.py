@@ -21,6 +21,7 @@ from brain.agent import ReActAgent
 from brain.router import CommandRouter, RouteType
 from brain.tools import create_tools_registry
 from brain.providers import OllamaProvider, create_cloud_provider
+from brain.hitl import set_confirmation_callback, get_undo_tracker
 from memory import MemoryManager
 
 
@@ -37,6 +38,15 @@ ORANGE = "\033[38;5;208m"
 RESET = "\033[0m"
 
 PROVIDER_CHOICES = ["groq", "openrouter", "google"]
+
+
+def _cli_confirmation(message: str, risk_level: str = "yellow") -> bool:
+    """CLI confirmation prompt for HITL actions."""
+    color = "\033[33m" if risk_level == "yellow" else "\033[31m"
+    print(f"\n{color}⚠️  CONFIRMATION REQUIRED [{risk_level.upper()}]{RESET}")
+    print(f"   {message}")
+    response = input("   Confirm? [y/N]: ").strip().lower()
+    return response in ("y", "yes")
 
 
 def signal_handler(sig, frame):
@@ -209,6 +219,12 @@ def run_jarvis(args):
     tool_registry = create_tools_registry()
     agent = ReActAgent(llm_client=llm_provider, tool_registry=tool_registry)
     logger.info("Agent ready")
+
+    # Initialize HITL (Human-in-the-Loop)
+    logger.info("Initializing HITL system...")
+    get_undo_tracker()  # warm up undo tracker
+    set_confirmation_callback(_cli_confirmation)
+    logger.info("HITL system ready")
 
     router = None
     if not args.disable_router:

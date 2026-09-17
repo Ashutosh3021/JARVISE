@@ -43,6 +43,9 @@ creds/
 
 # Models (downloadable)
 models/
+data/kokoro_models
+*.onnx
+*.bin
 
 # OS
 .DS_Store

@@ -1,0 +1,1 @@
+{"timestamp": 1789661136.2082307, "event_type": "tool_executed", "tool_name": "web_search", "action": "search", "risk_level": "green", "args_summary": "{\"query\": \"test\"}", "result_summary": "results...", "confidence": 0.95, "user_confirmed": null, "undo_id": null, "metadata": {}}

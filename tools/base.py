@@ -1,16 +1,29 @@
 """
 JARVIS Tools - Base Classes
 
-Provides base classes and error handling utilities for all tools.
+Provides base classes, risk classification, and error handling utilities for all tools.
 """
 
 from abc import ABC, abstractmethod
+from enum import Enum
 from typing import Any, Callable, TypeVar, ParamSpec
 
 from loguru import logger
 
 P = ParamSpec("P")
 R = TypeVar("R")
+
+
+class RiskLevel(str, Enum):
+    """Three-tier action risk classification.
+    
+    GREEN:  Read-only, reversible, low-risk (search, read, summarize)
+    YELLOW: Writes, sends, deletes, spends, publishes
+    RED:    Irreversible, financial, legal, reputation
+    """
+    GREEN = "green"
+    YELLOW = "yellow"
+    RED = "red"
 
 
 class ToolError(Exception):
@@ -42,12 +55,17 @@ class ConfirmationRequest(Exception):
         tool_name: Name of the tool requesting confirmation
         action: The action that needs confirmation
         details: Additional details about the action
+        risk_level: The risk level of the action
+        suggested_action: What JARVIS intends to do (for repeat-back)
     """
     
-    def __init__(self, tool_name: str, action: str, details: str | None = None):
+    def __init__(self, tool_name: str, action: str, details: str | None = None,
+                 risk_level: RiskLevel = RiskLevel.YELLOW, suggested_action: str | None = None):
         self.tool_name = tool_name
         self.action = action
         self.details = details
+        self.risk_level = risk_level
+        self.suggested_action = suggested_action
         
         message = f"Tool '{tool_name}' requires confirmation for: {action}"
         if details:
@@ -62,8 +80,12 @@ class BaseTool(ABC):
     All tools should inherit from this class and implement the execute method.
     """
     
-    def __init__(self, name: str | None = None):
+    # Default risk level — subclasses override
+    RISK_LEVEL = RiskLevel.GREEN
+    
+    def __init__(self, name: str | None = None, risk_level: RiskLevel | None = None):
         self.name = name or self.__class__.__name__
+        self.risk_level = risk_level or self.RISK_LEVEL
         self._setup_logging()
     
     def _setup_logging(self) -> None:
@@ -85,7 +107,7 @@ class BaseTool(ABC):
         pass
     
     def __repr__(self) -> str:
-        return f"<{self.__class__.__name__}>"
+        return f"<{self.__class__.__name__} risk={self.risk_level.value}>"
 
 
 def execute_with_error_handling(
@@ -180,5 +202,6 @@ __all__ = [
     "BaseTool",
     "ToolError",
     "ConfirmationRequest",
+    "RiskLevel",
     "execute_with_error_handling",
 ]

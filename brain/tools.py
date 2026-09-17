@@ -1,7 +1,7 @@
 """
 JARVIS Brain Layer - Tool Registry Module
 
-Manages tool registration and parses action calls from LLM output.
+Manages tool registration, risk classification, and HITL enforcement.
 """
 
 import re
@@ -12,7 +12,9 @@ from typing import Any, Callable
 
 from loguru import logger
 
-from tools.base import ConfirmationRequest
+from tools.base import ConfirmationRequest, RiskLevel
+from brain.hitl import ask_confirmation, get_undo_tracker
+from brain.audit import get_audit_log
 
 
 class ToolExecutionError(Exception):
@@ -155,14 +157,19 @@ class ToolRegistry:
         func: Callable[..., Any],
         description: str = "",
         parameter_schema: dict | None = None,
+        risk_level: RiskLevel | str = RiskLevel.GREEN,
     ) -> None:
         """Register a tool with the registry."""
+        if isinstance(risk_level, str):
+            risk_level = RiskLevel(risk_level)
+        
         self.tools[name.lower()] = {
             "func": func,
             "desc": description,
             "schema": parameter_schema,
+            "risk_level": risk_level,
         }
-        logger.debug(f"Registered tool: {name}")
+        logger.debug(f"Registered tool: {name} (risk={risk_level.value})")
 
     def unregister(self, name: str) -> bool:
         """Unregister a tool."""
@@ -178,18 +185,20 @@ class ToolRegistry:
         return {name: info["desc"] for name, info in self.tools.items()}
 
     def get_tool_schema(self) -> str:
-        """Get formatted string of tool schemas for prompt."""
+        """Get formatted string of tool schemas for prompt (includes risk levels)."""
         if not self.tools:
             return "No tools available."
         
         lines = ["Available tools:"]
         for name, info in self.tools.items():
             desc = info.get("desc", "No description")
-            lines.append(f"- {name}: {desc}")
+            risk = info.get("risk_level", RiskLevel.GREEN)
+            risk_tag = f" [{risk.value.upper()}]" if risk != RiskLevel.GREEN else ""
+            lines.append(f"- {name}{risk_tag}: {desc}")
         return "\n".join(lines)
 
     def execute(self, name: str, args: dict[str, Any] | str | None = None) -> str:
-        """Execute a registered tool with optional retry logic."""
+        """Execute a registered tool with HITL enforcement and audit logging."""
         name_lower = name.lower()
         
         if name_lower not in self.tools:
@@ -197,8 +206,9 @@ class ToolRegistry:
         
         tool = self.tools[name_lower]
         func = tool["func"]
+        risk_level = tool.get("risk_level", RiskLevel.GREEN)
         
-        # Normalize args to dict - simple approach
+        # Normalize args to dict
         normalized_args = {}
         if args is None:
             normalized_args = {}
@@ -208,16 +218,52 @@ class ToolRegistry:
             if args.startswith('{') or args.startswith('['):
                 try:
                     normalized_args = json.loads(args)
-                except:
+                except Exception:
                     normalized_args = {}
             else:
                 normalized_args = {}
         
-        # Direct execution
+        # === HITL ENFORCEMENT ===
+        # RED actions: always require confirmation, no auto-execute
+        if risk_level == RiskLevel.RED:
+            action_desc = f"Execute {name} with args: {normalized_args}"
+            granted = ask_confirmation(action_desc, risk_level="red")
+            
+            get_audit_log().log_confirmation(
+                tool_name=name, action=action_desc,
+                risk_level="red", granted=granted,
+            )
+            
+            if not granted:
+                return f"Action '{name}' denied by user."
+        
+        # YELLOW actions: require confirmation
+        elif risk_level == RiskLevel.YELLOW:
+            action_desc = f"Execute {name} with args: {normalized_args}"
+            granted = ask_confirmation(action_desc, risk_level="yellow")
+            
+            get_audit_log().log_confirmation(
+                tool_name=name, action=action_desc,
+                risk_level="yellow", granted=granted,
+            )
+            
+            if not granted:
+                return f"Action '{name}' denied by user."
+        
+        # GREEN actions: auto-execute, just log
+        
+        # === EXECUTION ===
         try:
             result = func(normalized_args)
             result_str = str(result) if result is not None else "Done"
             logger.debug(f"Tool '{name}' executed: {result_str}")
+            
+            # Audit log
+            get_audit_log().log_tool_execution(
+                tool_name=name, action=f"execute {name}",
+                risk_level=risk_level.value, args=normalized_args,
+                result=result_str,
+            )
             
             # Record success for learning
             if self._retry_engine:
@@ -225,6 +271,7 @@ class ToolRegistry:
             
             return result_str
         except ConfirmationRequest as e:
+            # Tool itself raised confirmation (legacy path)
             details = f" {e.details}" if e.details else ""
             return (
                 f"Confirmation required for tool '{e.tool_name}' action '{e.action}'.{details} "
@@ -233,6 +280,13 @@ class ToolRegistry:
         except Exception as e:
             error_msg = f"Tool '{name}' failed: {str(e)}"
             logger.error(error_msg)
+            
+            # Audit log failure
+            get_audit_log().log_tool_execution(
+                tool_name=name, action=f"execute {name}",
+                risk_level=risk_level.value, args=normalized_args,
+                result=f"ERROR: {e}",
+            )
             
             # Record failure for learning
             if self._retry_engine:
@@ -499,7 +553,8 @@ def create_tools_registry() -> ToolRegistry:
     registry.register(
         "browser",
         execute_browser,
-        "Navigate to URLs, extract content, fill forms, click elements"
+        "Navigate to URLs, extract content, fill forms, click elements",
+        risk_level=RiskLevel.GREEN,
     )
     
     # Register web search tool
@@ -531,7 +586,8 @@ def create_tools_registry() -> ToolRegistry:
     registry.register(
         "web_search",
         execute_search,
-        "Search the web using duckduckgo-search API"
+        "Search the web using duckduckgo-search API",
+        risk_level=RiskLevel.GREEN,
     )
     
     # Register filesystem tool
@@ -549,7 +605,8 @@ def create_tools_registry() -> ToolRegistry:
     registry.register(
         "filesystem",
         execute_filesystem,
-        "Read, write, delete files. Requires user confirmation."
+        "Read, write, delete files. Write/delete requires confirmation.",
+        risk_level=RiskLevel.YELLOW,
     )
     
     # Register code execution tool ONLY if explicitly enabled
@@ -576,7 +633,8 @@ def create_tools_registry() -> ToolRegistry:
         registry.register(
             "execute_code",
             execute_code,
-            "Run Python code in sandboxed environment (requires ENABLE_CODE_EXEC=true in .env)"
+            "Run Python code in sandboxed environment (requires ENABLE_CODE_EXEC=true in .env)",
+            risk_level=RiskLevel.RED,
         )
     else:
         # Register a stub that explains it's disabled
@@ -586,7 +644,8 @@ def create_tools_registry() -> ToolRegistry:
         registry.register(
             "execute_code",
             execute_code_disabled,
-            "Code execution disabled - requires ENABLE_CODE_EXEC=true in .env"
+            "Code execution disabled - requires ENABLE_CODE_EXEC=true in .env",
+            risk_level=RiskLevel.RED,
         )
     
     # Register Google Calendar tool
@@ -603,7 +662,8 @@ def create_tools_registry() -> ToolRegistry:
     registry.register(
         "google_calendar",
         execute_calendar,
-        "List, create, update Google Calendar events"
+        "List, create, update Google Calendar events",
+        risk_level=RiskLevel.YELLOW,
     )
     
     # Register Google Email tool
@@ -620,7 +680,8 @@ def create_tools_registry() -> ToolRegistry:
     registry.register(
         "google_email",
         execute_gmail,
-        "Read, send Google Email messages"
+        "Read, send Google Email messages",
+        risk_level=RiskLevel.YELLOW,
     )
     
     # Register Microsoft Outlook tool
@@ -637,7 +698,8 @@ def create_tools_registry() -> ToolRegistry:
     registry.register(
         "outlook",
         execute_outlook,
-        "Read, send Microsoft Outlook emails via Microsoft Graph"
+        "Read, send Microsoft Outlook emails via Microsoft Graph",
+        risk_level=RiskLevel.YELLOW,
     )
     
     # Register system monitor tool
@@ -654,7 +716,8 @@ def create_tools_registry() -> ToolRegistry:
     registry.register(
         "system_monitor",
         execute_monitor,
-        "Get CPU, memory, disk, network statistics"
+        "Get CPU, memory, disk, network statistics",
+        risk_level=RiskLevel.GREEN,
     )
     
     # === BASIC TOOLS (BUG-015 fix: add missing memory tools) ===
