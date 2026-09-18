@@ -54,7 +54,7 @@ class Preference:
 class PreferenceMemory:
     """Memory system for storing and retrieving user preferences."""
     
-    def __init__(self, storage_path: str = "./data/preferences.json"):
+    def __init__(self, storage_path: str = "./data/learned_preferences.json"):
         """Initialize preference memory.
         
         Args:

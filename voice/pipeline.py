@@ -38,7 +38,7 @@ class VoicePipeline:
                  stt_device: str | None = None,
                  tts_voice: str = "bm_lewis",
                  tts_language: str = "b",
-                 silence_timeout: float = 2.5,
+                 silence_timeout: float = 1.0,
                  max_recording_duration: float = 30.0,
                  vad_mode: int = 3):
         """
@@ -273,6 +273,25 @@ class VoicePipeline:
         thread = threading.Thread(target=self.speak, args=(text, False))
         thread.daemon = True
         thread.start()
+    
+    def speak_streaming(self, text: str):
+        """
+        Speak text immediately — no wait, fire-and-forget.
+        Used for low-latency voice responses.
+        """
+        if not self._tts:
+            return
+        thread = threading.Thread(target=self._speak_chunk, args=(text,), daemon=True)
+        thread.start()
+    
+    def _speak_chunk(self, text: str):
+        """Internal: synthesize and play a chunk."""
+        try:
+            audio = self._tts.speak(text)
+            if len(audio) > 0:
+                self._audio_output.play(audio, wait=False)
+        except Exception as e:
+            logger.error(f"TTS chunk error: {e}")
     
     def stop_speaking(self):
         """Stop current TTS playback."""

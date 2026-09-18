@@ -2,384 +2,322 @@
 
 <img src="https://img.shields.io/badge/JARVIS-v1.0.0-blueviolet?style=for-the-badge&logo=robot&logoColor=white" alt="JARVIS v1.0.0"/>
 
-# 👾 JARVIS
+# JARVIS
 ### *Just A Rather Very Intelligent System*
 
-**A privacy-first, fully local AI assistant — voice, web UI, and CLI in one package.**
+**A privacy-first AI assistant — voice, CLI, and 19 tools in one package.**
 
 <br/>
 
 [![Python Version](https://img.shields.io/badge/python-3.11+-3776AB?style=flat-square&logo=python&logoColor=white)](https://www.python.org/downloads/)
-[![PyPI](https://img.shields.io/badge/PyPI-jarvise-blue?style=flat-square&logo=pypi&logoColor=white)](https://pypi.org/project/jarvise)
-[![FastAPI](https://img.shields.io/badge/FastAPI-backend-009688?style=flat-square&logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com/)
-[![React](https://img.shields.io/badge/React-18-61DAFB?style=flat-square&logo=react&logoColor=black)](https://react.dev/)
 [![Ollama](https://img.shields.io/badge/Ollama-LLM-FF6600?style=flat-square)](https://ollama.com)
+[![Groq](https://img.shields.io/badge/Groq-Cloud_LLM-7C3AED?style=flat-square)](https://groq.com)
 [![ChromaDB](https://img.shields.io/badge/ChromaDB-memory-green?style=flat-square)](https://www.trychroma.com/)
 [![License](https://img.shields.io/badge/license-MIT-22c55e?style=flat-square)](LICENSE)
-[![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20Linux%20%7C%20macOS-lightgrey?style=flat-square)]()
 
 <br/>
 
-> 🔒 **100% local. No cloud. No telemetry. Your data never leaves your machine.**
+> 100% local LLM support. Voice in, voice out. No web UI needed.
 
-<br/>
-
-[🚀 Quick Start](#-quick-start) · [✨ Features](#-features) · [🏗️ Architecture](#️-architecture) · [📁 Project Structure](#-project-structure) · [🛠️ Tech Stack](#️-tech-stack) · [📖 Docs](#-documentation)
+[Quick Start](#-quick-start) | [Commands](#-commands) | [Features](#-features) | [Architecture](#-architecture) | [Configuration](#%EF%B8%8F-configuration)
 
 ---
 
 </div>
 
-## 🚀 Quick Start
+## Quick Start
 
 ### Prerequisites
 
-Before installing, make sure you have:
+- **Python 3.11+**
+- **Ollama** (for local LLM) — [ollama.com](https://ollama.com)
+- **Groq API key** (for cloud LLM) — [groq.com](https://groq.com) (free tier available)
 
-- **Python 3.11+** — [python.org](https://www.python.org/downloads/)
-- **Ollama** — [ollama.com](https://ollama.com) — must be running on `localhost:11434`
-
-```bash
-# Start Ollama and pull a model
-ollama serve
-ollama pull llama3.2
-```
-
-### Install from PyPI
+### Install
 
 ```bash
-# Core install — text chat + web UI + API (no voice)
-pip install jarvise
-
-# With voice support (Whisper STT + Kokoro TTS)
-pip install jarvise[voice]
-
-# With Google Calendar / Gmail tools
-pip install jarvise[google]
-
-# With Microsoft Outlook tools
-pip install jarvise[microsoft]
-
-# Everything — voice, Google, Microsoft, browser, CLI
-pip install jarvise[all]
-```
-
-### Configure and Run
-
-```bash
-# 1. Copy the example env file and edit it
-cp .env.example .env
-
-# 2. Launch JARVIS
-jarvis
-```
-
-Open **http://localhost:8000** in your browser and start chatting.
-
----
-
-## 🖥️ Install from Source
-
-```bash
-# Clone the repo
-git clone https://github.com/Ashutosh3021/JARVISE.git
 cd JARVISE
-
-# Create and activate a virtual environment
 python -m venv .venv
 
 # Windows
 .venv\Scripts\activate
+
 # Linux / macOS
 source .venv/bin/activate
 
-# Install dependencies
 pip install -r requirements.txt
+```
 
-# Configure environment
-cp .env.example .env
+### First Run
 
-# Run
-python main.py
+```bash
+# Cloud LLM (Groq) + Voice — recommended for first try
+python main.py --way
+
+# Select option 1 (groq), enter your API key, enter model: qwen/qwen3.8-27b
 ```
 
 ---
 
-## 🖼️ Preview
+## Commands
 
-<div align="center">
+### Starting JARVIS
 
-**Startup — hardware detection & boot sequence**
+| Command | Description |
+|---------|-------------|
+| `python main.py --way` | Interactive cloud provider selection (Groq/OpenRouter/Google) |
+| `python main.py --way --text-only` | Cloud LLM, text-only (no mic/speaker) |
+| `python main.py --model` | Auto-detect best local Ollama model for your hardware |
+| `python main.py --ollama3.2 -run` | Pull llama3.2 if needed, then run locally |
+| `python main.py --qwen2.5-coder:7b -run` | Pull and run a specific Ollama model |
+| `python main.py --verbose` | Show detailed logs (STT, TTS, LLM timing) |
+| `python main.py --text-only` | Text input only (no voice pipeline) |
+| `python main.py --disable-router` | Skip command router, always use LLM |
 
-![JARVIS startup terminal showing ASCII logo, boot messages and hardware detection](Image/ss.png)
+### Voice Commands (while running)
 
-*JARVIS boots in under a second, detects your hardware, initializes the logger, and serves the UI — all locally.*
+| Say | Action |
+|-----|--------|
+| **Press Space** | Start listening (hold to talk, release to process) |
+| "stop" / "cancel" / "shut up" | Interrupt TTS playback |
 
-</div>
+### CLI Shortcuts (type at the `You:` prompt)
 
----
+| Input | Action |
+|-------|--------|
+| `triage` / `check email` | Run email triage |
+| `conflicts` / `check conflicts` | Check calendar conflicts |
+| `suggest times` / `meeting times` | Get available meeting slots |
+| `suggest` / `suggestions` / `what should i do` | Get proactive suggestions |
+| `exit` / `quit` | Shutdown JARVIS |
 
-## ✨ Features
+### Example Session
 
-<table>
-<tr>
-<td width="50%">
-
-### 🤖 Intelligent Chat
-Conversational AI powered by a **ReAct agent loop** — reasons step by step, uses tools, and responds with context awareness. No hallucinated shortcuts; it thinks before it speaks.
-
-### 🧠 Persistent Memory
-Remembers you across sessions. **ChromaDB** stores vector embeddings of your conversations, while `MEMORY.md` holds distilled facts — names, preferences, and key context.
-
-### 🎤 Voice Interface
-Speak naturally. **Faster-Whisper** transcribes your voice locally, and **Kokoro TTS** reads responses back. Fully offline — no API keys, no latency from the cloud.
-
-</td>
-<td width="50%">
-
-### 🌐 Web UI
-A polished **React + TypeScript** interface served at `localhost:8000`. Chat, view memory, manage settings — all in your browser.
-
-### 💻 CLI Shell
-Power users can interact via a rich **terminal interface** — ideal for scripting, piping, or when you just prefer the keyboard.
-
-### 🔌 REST API
-JARVIS exposes a clean `/api/*` REST interface so you can build integrations, trigger automations, or connect your own tools.
-
-### 📊 System Monitoring
-Ask JARVIS "how's my CPU?" — the built-in `system_monitor` tool reports CPU, RAM, and GPU stats in real time.
-
-</td>
-</tr>
-</table>
-
----
-
-## 🏗️ Architecture
-
-### System Overview
-
-```mermaid
-graph TB
-    subgraph "🖥️ Interfaces"
-        UI[Web UI<br/>localhost:8000]
-        CLI[CLI Shell<br/>jarvis shell]
-        API[REST API<br/>/api/*]
-    end
-
-    subgraph "⚙️ JARVIS Core"
-        Backend[FastAPI Backend]
-        Agent[ReAct Agent<br/>brain/]
-        Memory[ChromaDB<br/>memory/]
-        Voice[Voice Pipeline<br/>voice/]
-        Tools[Tool Registry<br/>tools/]
-    end
-
-    subgraph "🤖 AI Layer"
-        Ollama[Ollama<br/>localhost:11434]
-        LLM[Llama 3.2]
-    end
-
-    UI -->|WebSocket + HTTP| Backend
-    CLI -->|HTTP| Backend
-    API -->|HTTP| Backend
-
-    Backend --> Agent
-    Agent --> Memory
-    Agent --> Voice
-    Agent --> Tools
-    Agent <-->|inference| Ollama
-    Ollama --- LLM
 ```
+(.venv) PS C:\JARVISE> python main.py --way
 
-### Request Lifecycle
+You: What time is it?
+JARVIS: It's 3:45 PM on September 18, 2026.
 
-```mermaid
-flowchart LR
-    subgraph "📥 Input"
-        MIC[🎙️ Microphone]
-        TXT[⌨️ Text / CLI]
-        WEB[🌐 Web UI]
-    end
+You: search the web for latest AI news
+JARVIS: [searches web, summarizes top 5 articles]
 
-    subgraph "🔄 Processing"
-        STT[Whisper STT]
-        AGENT[ReAct Agent]
-        LLM[Ollama LLM]
-    end
+You: remember that I prefer dark mode
+JARVIS: Got it. I'll remember you prefer dark mode.
 
-    subgraph "💾 Memory"
-        VEC[ChromaDB<br/>Vector Store]
-        FILE[MEMORY.md<br/>Key Facts]
-    end
+You: what do you know about me?
+JARVIS: You prefer dark mode...
 
-    subgraph "📤 Output"
-        TTS[Kokoro TTS 🔊]
-        RESP[Text Response 📝]
-        UI2[Web UI Update 🌐]
-    end
+You: triage
+Email Triage: 3 urgent, 5 normal, 2 promotional
 
-    MIC --> STT --> AGENT
-    TXT --> AGENT
-    WEB --> AGENT
-
-    AGENT <--> VEC
-    AGENT <--> FILE
-    AGENT <-->|reason + act| LLM
-
-    AGENT --> TTS
-    AGENT --> RESP
-    AGENT --> UI2
+You: exit
 ```
 
 ---
 
-## 📁 Project Structure
+## Features
 
-```
-JARVIS/
-│
-├── 🖥️  backend/           # FastAPI server, WebSocket handlers, routes
-├── 🧠  brain/             # ReAct agent, chains, prompt templates
-├── 💾  memory/            # ChromaDB vector store + MEMORY.md fact file
-├── 🛠️  tools/             # Tool modules: browser, code_exec, system_monitor, etc.
-├── 🎤  voice/             # STT (Faster-Whisper) + TTS (Kokoro) pipeline
-├── 🌐  ui/                # React 18 + TypeScript + Vite frontend
-├── 💻  cli/               # Python CLI package (argparse-based)
-│
-├── 📖  Docs/              # Extended documentation
-├── 🧪  tests/             # Test suites and bug regression tests
-│
-├── main.py               # 🚀 Application entry point
-├── HowToRun.md           # 📋 Step-by-step setup guide
-├── .env.example          # ⚙️  Environment template
-└── requirements.txt      # 📦 Python dependencies
-```
+### 9 Core Features
+
+| # | Feature | Module | What It Does |
+|---|---------|--------|--------------|
+| 1 | **Voice Pipeline** | `voice/` | Push-to-talk STT (Whisper) + TTS (Kokoro) + VAD + interrupt handling |
+| 2 | **HITL Decision Engine** | `brain/hitl.py` | 3-tier risk classification (GREEN/YELLOW/RED), confirmation prompts, undo tracking, audit log |
+| 3 | **RAG Memory** | `memory/` | ChromaDB vector store, MEMORY.md facts, learned preferences, forget stale entries |
+| 4 | **Proactive Suggestions** | `brain/proactive.py` | Detects interaction patterns, suggests follow-ups, time-of-day awareness |
+| 5 | **Calendar + Email** | `brain/calendar_email.py` | Email triage (urgent/important/promo), conflict detection, meeting slot suggestions, draft replies |
+| 6 | **Browser Automation** | `tools/browser.py` | Navigate, extract, click, fill, screenshot, tabs, multi-step research with citations |
+| 7 | **Code Sandbox** | `brain/sandbox.py` | Sandboxed Python/shell execution, diff preview, blocked imports, execution history |
+| 8 | **Multi-Agent** | `brain/multi_agent.py` | Parallel/sequential/pipeline agent execution, role-based prompts, budget tracking |
+| 9 | **Task Planner** | `brain/planner.py` | Goal decomposition, dependency graphs, progress tracking, replanning |
+
+### 19 Registered Tools
+
+| Tool | Risk | Description |
+|------|------|-------------|
+| `browser` | GREEN | Browser automation (navigate, click, fill, screenshot, tabs) |
+| `research` | GREEN | Multi-step research with source citations |
+| `web_search` | GREEN | DuckDuckGo web search |
+| `filesystem` | YELLOW | Read/write/delete files |
+| `execute_code` | RED | Sandboxed Python/shell execution |
+| `google_calendar` | YELLOW | Google Calendar events |
+| `google_email` | YELLOW | Gmail read/send |
+| `outlook` | YELLOW | Microsoft Outlook/Exchange |
+| `system_monitor` | GREEN | CPU, RAM, GPU stats |
+| `get_time` | GREEN | Current time |
+| `get_date` | GREEN | Current date |
+| `pwd` | GREEN | Current directory |
+| `remember` | GREEN | Save to memory |
+| `recall` | GREEN | Search memory |
+| `list_memories` | GREEN | List all memories |
+| `forget` | GREEN | Delete a memory |
+| `calendar_email` | YELLOW | Unified calendar + email orchestrator |
+| `multi_agent` | YELLOW | Spawn sub-agents for parallel work |
+| `planner` | GREEN | Create and manage task plans |
 
 ---
 
-## 🛠️ Tech Stack
+## Architecture
 
-| Layer | Technology | Purpose |
-|-------|-----------|---------|
-| **Backend** | [FastAPI](https://fastapi.tiangolo.com/) + Python 3.11+ | REST API, WebSocket, async server |
-| **AI Inference** | [Ollama](https://ollama.com) (Llama 3.2) | Local LLM — no cloud needed |
-| **Agent Framework** | ReAct loop | Step-by-step reasoning with tools |
-| **Memory / RAG** | [ChromaDB](https://www.trychroma.com/) | Vector embeddings, semantic recall |
-| **Speech-to-Text** | [Faster-Whisper](https://github.com/SYSTRAN/faster-whisper) | Offline voice transcription |
-| **Text-to-Speech** | [Kokoro](https://github.com/remsky/Kokoro-FastAPI) | Offline neural TTS |
-| **Frontend** | React 18 + TypeScript + Vite | Snappy, modern web interface |
-| **CLI** | Python (argparse) | Terminal interface |
+```
+You (voice or text)
+    |
+    v
+Voice Pipeline (STT)  ──or──  CLI Input
+    |
+    v
+Command Router ──────────────> Direct Tool (fast path)
+    |                               |
+    v                               v
+ReAct Agent + LLM             Tool Execution
+    |                               |
+    v                               v
+Response ───────────────────> TTS (speaks) + Text Output
+```
+
+### LLM Providers
+
+| Provider | Command | Speed | Cost |
+|----------|---------|-------|------|
+| **Groq** (cloud) | `--way` → select groq | Fastest (~200ms) | Free tier |
+| **OpenRouter** (cloud) | `--way` → select openrouter | Fast | Free models available |
+| **Google Gemini** (cloud) | `--way` → select google | Fast | Free tier |
+| **Ollama** (local) | `--model` or `--<name> -run` | Depends on hardware | Free |
 
 ---
 
-## ⚙️ Configuration
+## Configuration
 
-JARVIS is configured via a `.env` file in the project root:
+### `.env` File
 
 ```env
-# Ollama
+# Ollama (local fallback)
 OLLAMA_HOST=http://localhost:11434
 OLLAMA_MODEL=llama3.2:latest
 
-# Server
-UI_HOST=127.0.0.1
-UI_PORT=8000
+# Cloud providers (used with --way)
+GROQ_API_KEY=gsk_...
+GROQ_MODEL=qwen/qwen3.8-27b
+OPENROUTER_API_KEY=
+OPENROUTER_MODEL=meta-llama/llama-3.2-3b-instruct:free
+GOOGLE_AI_API_KEY=
+GOOGLE_AI_MODEL=gemini-2.0-flash
+
+# Voice
+WHISPER_MODEL=base
+KOKORO_VOICE=bm_lewis
+TTS_SPEED=1.0
 
 # Memory
-CHROMA_PERSIST_DIR=./memory/chroma
-MEMORY_FILE=./memory/MEMORY.md
+CHROMA_PERSIST_DIRECTORY=./data/chromadb
+MEMORY_FILE=./data/MEMORY.md
 
-# Voice (optional)
-VOICE_ENABLED=true
-WHISPER_MODEL=base
+# Logging
+LOG_LEVEL=INFO
+LOG_FILE=./data/jarvis.log
 ```
+
+### Hardware Profiles
+
+JARVIS auto-detects your hardware and picks the right STT model:
+
+| Hardware | STT Model | Notes |
+|----------|-----------|-------|
+| NVIDIA GPU (4GB+) | `tiny` on CUDA | Fastest transcription |
+| NVIDIA GPU (2GB+) | `tiny` on CUDA | Good balance |
+| CPU only | `tiny` on CPU | Slower but works |
 
 ---
 
-## 🧑‍💻 Development
-
-### Running Modes
+## Testing
 
 ```bash
-# Full app — backend + web UI
-python main.py
-
-# Backend API only (no UI)
-python -m backend.main
-
-# CLI interactive shell
-jarvis shell
-# or
-python -m cli shell
-
-# CLI — single query
-jarvis chat "What's the weather like today?"
-```
-
-### Running Tests
-
-```bash
-# Full test suite
-pytest tests/
-
-# Specific bug regression test
-PYTHONIOENCODING=utf-8 python tests/Bugs_Testing/B1Test.py
+# Run all feature tests (72 tests across 9 features)
+python tests/test_all_features.py
 
 # Verbose output
-pytest tests/ -v --tb=short
+python tests/test_all_features.py 2>&1 | Select-String -Pattern "\[PASS\]|\[FAIL\]"
 ```
-
-### Adding a New Tool
-
-1. Create a new module in `tools/your_tool.py`
-2. Implement the tool interface (see `tools/README.md`)
-3. Register it in `brain/tool_registry.py`
-4. The ReAct agent will automatically discover and use it
 
 ---
 
-## 🔧 Troubleshooting
+## Project Structure
+
+```
+JARVISE/
+├── brain/                  # Core AI
+│   ├── agent.py            # ReAct agent loop
+│   ├── tools.py            # Tool registry (19 tools)
+│   ├── router.py           # Command router (fast path)
+│   ├── hitl.py             # Human-in-the-loop + undo
+│   ├── audit.py            # JSONL audit log
+│   ├── proactive.py        # Proactive suggestions
+│   ├── calendar_email.py   # Email triage + calendar
+│   ├── research.py         # Multi-step research
+│   ├── sandbox.py          # Code execution sandbox
+│   ├── multi_agent.py      # Multi-agent orchestration
+│   ├── planner.py          # Task planning + goals
+│   ├── prompt_builder.py   # Prompt assembly
+│   └── providers/          # LLM providers (Ollama, Groq, etc.)
+├── voice/                  # Voice pipeline
+│   ├── pipeline.py         # Voice orchestrator
+│   ├── stt.py              # Speech-to-text (Whisper)
+│   ├── tts.py              # Text-to-speech (Kokoro)
+│   ├── vad.py              # Voice activity detection
+│   ├── recorder.py         # Audio recording
+│   ├── audio_output.py     # Speaker output
+│   └── keyboard_handler.py # Push-to-talk
+├── memory/                 # Memory system
+│   ├── MemoryManager.py    # Unified memory facade
+│   ├── chroma_store.py     # ChromaDB vector store
+│   ├── filtered_store.py   # Filtered memory
+│   ├── preference_store.py # User preferences
+│   ├── memory_file.py      # MEMORY.md controller
+│   └── importance.py       # Importance scoring
+├── tools/                  # Tool modules
+│   ├── base.py             # RiskLevel, BaseTool
+│   ├── browser.py          # Browser automation
+│   └── ...
+├── learning/               # Learning modules
+│   ├── preference_memory.py # Learned preferences
+│   ├── tool_cache.py       # Tool result caching
+│   └── retry_engine.py     # Smart retries
+├── core/                   # Core utilities
+│   ├── config.py           # Configuration
+│   ├── hardware.py         # Hardware detection
+│   └── logger.py           # Logging setup
+├── data/                   # Runtime data (auto-created)
+│   ├── chromadb/           # Vector store
+│   ├── kokoro_models/      # TTS models
+│   ├── audit.jsonl         # Audit log
+│   └── ...
+├── tests/
+│   └── test_all_features.py # 72-test feature suite
+├── main.py                 # Entry point
+├── .env                    # Configuration
+└── requirements.txt        # Dependencies
+```
+
+---
+
+## Troubleshooting
 
 | Problem | Fix |
 |---------|-----|
-| `jarvis command not found` | Reinstall: `pip install jarvise` — check entry points in pyproject.toml |
-| Ollama not responding | Run `ollama serve` and confirm `ollama list` shows your model |
-| Port already in use | Set `UI_PORT=8001` in `.env` |
-| VRAM / memory issues | Switch to a smaller model: `OLLAMA_MODEL=llama3.2:1b` |
-| Voice not working | Install voice extras: `pip install jarvise[voice]` |
+| `Voice pipeline failed` | Run with `--text-only` flag |
+| `Ollama not responding` | Start Ollama: `ollama serve` |
+| `Groq API error` | Check API key in `.env` |
+| `Preference memory error` | Delete `data/preferences.json` and restart |
+| Slow responses | Use `--way` with Groq (fastest cloud provider) |
+| TTS not speaking | Check speaker output, TTS models in `data/kokoro_models/` |
+| STT not hearing | Check microphone, try Space bar push-to-talk |
 
 ---
 
-## 📖 Documentation
+## License
 
-| Document | Description |
-|----------|-------------|
-| [HowToRun.md](HowToRun.md) | Prerequisites, installation, and first-run walkthrough |
-| [publish.md](publish.md) | PyPI deployment guide |
-| [Docs/](Docs/) | Architecture deep-dives, API reference, tool guides |
-
----
-
-## 🗺️ Roadmap
-
-- [ ] Multi-model support (swap LLMs without restart)
-- [ ] Plugin system for third-party tools
-- [ ] Mobile-responsive web UI improvements
-- [ ] Long-term memory summarization
-- [ ] Wake-word detection for hands-free activation
-
----
-
-## 🤝 Contributing
-
-Contributions are welcome. Please open an issue first to discuss what you'd like to change. For bug fixes, feel free to submit a PR directly.
-
----
-
-## 📄 License
-
-MIT License — see [LICENSE](LICENSE) for full details.
+MIT License — see [LICENSE](LICENSE) for details.
 
 ---
 
@@ -387,6 +325,6 @@ MIT License — see [LICENSE](LICENSE) for full details.
 
 **Built for privacy. Designed for speed. Made to be yours.**
 
-*🤖 JARVIS — Your Personal AI Assistant*
+*JARVIS — Your Personal AI Assistant*
 
 </div>

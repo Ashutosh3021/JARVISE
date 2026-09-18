@@ -1,0 +1,40 @@
+{
+  "interactions": [
+    {
+      "user_input": "heloo",
+      "tools_used": [],
+      "timestamp": 1789718202.341945,
+      "session_id": "default"
+    },
+    {
+      "user_input": "Hello, in your hear me.",
+      "tools_used": [],
+      "timestamp": 1789718234.6326177,
+      "session_id": "default"
+    },
+    {
+      "user_input": "What is your name and who are you?",
+      "tools_used": [],
+      "timestamp": 1789718271.2917542,
+      "session_id": "default"
+    }
+  ],
+  "sequence_counts": {
+    "heloo||hello, in your hear me.": 1,
+    "hello, in your hear me.||what is your name and who are you?": 1
+  },
+  "tool_sequences": {},
+  "command_frequency": {
+    "heloo": 1,
+    "hello, in your hear me.": 1,
+    "what is your name and who are you?": 1
+  },
+  "tool_frequency": {},
+  "time_patterns": {
+    "13": {
+      "heloo": 1,
+      "hello, in your hear me.": 1,
+      "what is your name and who are you?": 1
+    }
+  }
+}

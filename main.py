@@ -262,40 +262,82 @@ def run_jarvis(args):
             logger.warning("Running in text-only mode")
             args.text_only = True
         else:
+            # Quick responses — skip LLM for simple greetings/acknowledgements
+            _QUICK_RESPONSES = {
+                "hello": "Hello! How can I help?",
+                "hi": "Hi there! What can I do for you?",
+                "hey": "Hey! What's up?",
+                "thanks": "You're welcome!",
+                "thank you": "You're welcome!",
+                "bye": "Goodbye!",
+                "goodbye": "Goodbye!",
+                "ok": "Got it.",
+                "okay": "Got it.",
+                "yes": "Alright.",
+                "no": "Understood.",
+                "help": "I can search the web, run code, manage files, check emails and calendar, and more. Just ask!",
+            }
+
             def handle_transcription(text: str, confidence: float):
                 logger.info(f"{ORANGE}User: '{text}'{RESET} (confidence: {confidence:.2f})")
                 try:
-                    memory_context = memory_manager.format_context_for_prompt(text) if memory_manager else None
+                    text_lower = text.strip().lower().rstrip(".!?,")
+                    
+                    # Quick response for simple phrases (no LLM call = instant)
+                    if text_lower in _QUICK_RESPONSES:
+                        response = _QUICK_RESPONSES[text_lower]
+                        logger.info(f"{ORANGE}JARVIS (quick): {response}{RESET}")
+                        voice_pipeline.speak_streaming(response)
+                        if memory_manager:
+                            memory_manager.save_conversation(text, response)
+                        return
+
+                    # Skip RAG for short queries (< 5 words, no memory keywords)
+                    memory_context = None
+                    if memory_manager and len(text.split()) > 4:
+                        memory_context = memory_manager.format_context_for_prompt(text)
 
                     if router:
                         route_result = router.route(text)
                         if route_result.route_type == RouteType.DIRECT_TOOL:
                             response = router.execute_direct(route_result)
+                            voice_pipeline.speak_streaming(response)
                         elif route_result.route_type == RouteType.CHAIN:
                             response = router.execute_chain(route_result, text)
+                            voice_pipeline.speak_streaming(response)
                         else:
-                            response = agent.run(text, memory_context=memory_context)
+                            # Stream LLM response — start speaking as soon as first sentence arrives
+                            full_response = []
+                            first_spoken = False
+                            for chunk, is_final in agent.stream_run(text, memory_context=memory_context):
+                                full_response.append(chunk)
+                                # Speak first sentence immediately
+                                if not first_spoken and (". " in chunk or(chunk.endswith(".") and len(chunk) > 20)):
+                                    voice_pipeline.speak_streaming(chunk.strip())
+                                    first_spoken = True
+                            response = "".join(full_response)
+                            if not first_spoken and response:
+                                voice_pipeline.speak_streaming(response)
                     else:
                         response = agent.run(text, memory_context=memory_context)
+                        voice_pipeline.speak_streaming(response)
 
                     logger.info(f"{ORANGE}JARVIS: {response}{RESET}")
 
                     if memory_manager:
                         memory_manager.save_conversation(text, response)
 
-                    # Record interaction and show suggestions
+                    # Record interaction (skip suggestions for speed)
                     tools_used = []
                     if router:
                         route_result = router.route(text)
                         if route_result.tool_name:
                             tools_used = [route_result.tool_name]
                     proactive.record_interaction(text, tools_used)
-                    _show_suggestions(proactive, text, tools_used)
 
-                    voice_pipeline.speak_async(response)
                 except Exception as e:
                     logger.error(f"Error processing voice input: {e}")
-                    voice_pipeline.speak_async("I encountered an error processing that.")
+                    voice_pipeline.speak_streaming("I encountered an error processing that.")
 
             voice_pipeline.on_transcription(handle_transcription)
             voice_pipeline.start()

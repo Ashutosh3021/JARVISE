@@ -1,1 +1,3 @@
 {"undo_id": "47096b3e", "tool_name": "filesystem", "action": "write_file", "timestamp": 1789661136.2082307, "snapshot": {"path": "/tmp/test.txt", "old_content": "hello"}, "description": "Write to test file"}
+{"undo_id": "81efbf5b", "tool_name": "test_tool", "action": "test_action", "timestamp": 1789712170.0647106, "snapshot": {"file": "test.txt"}, "description": "Test undo"}
+{"undo_id": "a3a48db2", "tool_name": "test_tool", "action": "test_action", "timestamp": 1789712295.0923321, "snapshot": {"file": "test.txt"}, "description": "Test undo"}
