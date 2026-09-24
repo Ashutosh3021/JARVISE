@@ -12,6 +12,27 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
 
+
+def _open_tutorial_and_exit() -> None:
+    """Open assets/index.html in the browser. Must run BEFORE heavy imports."""
+    import webbrowser
+
+    candidates = [
+        Path(__file__).resolve().parent / "assets" / "index.html",
+    ]
+    for html in candidates:
+        if html.is_file():
+            webbrowser.open(html.as_uri())
+            print(f"Opened tutorial: {html}")
+            sys.exit(0)
+
+    print("Tutorial file not found: assets/index.html")
+    sys.exit(1)
+
+
+if "-tutorial" in sys.argv or "--tutorial" in sys.argv:
+    _open_tutorial_and_exit()
+
 from loguru import logger
 
 from core.logger import setup_logging
@@ -428,14 +449,16 @@ def main():
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
-  jarvise                      Run with auto-detected best local model
-  jarvise --model              Show best model for your hardware
-  jarvise --llama3.2 -run      Pull llama3.2 if needed, then run
-  jarvise --qwen2.5-coder:7b  Run with specific Ollama model
-  jarvise --way                Select cloud provider (Groq/OpenRouter/Google)
-  jarvise --text-only          Text-only mode (no voice)
+  jarvise -tutorial          Open interactive tutorial in browser
+  jarvise                    Run with auto-detected best local model
+  jarvise --model            Show best model for your hardware
+  jarvise --llama3.2 -run    Pull llama3.2 if needed, then run
+  jarvise --qwen2.5-coder:7b Run with specific Ollama model
+  jarvise --way              Select cloud provider (Groq/OpenRouter/Google)
+  jarvise --text-only        Text-only mode (no voice)
         """,
     )
+    parser.add_argument("-tutorial", "--tutorial", action="store_true", help="Open interactive tutorial in browser and exit")
     parser.add_argument("--text-only", action="store_true", help="Run without voice (text input only)")
     parser.add_argument("--verbose", "-v", action="store_true", help="Enable verbose logging")
     parser.add_argument("--disable-router", action="store_true", help="Disable command router (always use LLM)")

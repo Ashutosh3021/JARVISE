@@ -1,6 +1,8 @@
 include README.md
 include LICENSE
 include .env.example
+include assets/*.html
+recursive-include assets *.html
 recursive-exclude tests *
 recursive-exclude __pycache__ *
 recursive-exclude *.egg-info *

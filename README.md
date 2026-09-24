@@ -1,11 +1,11 @@
 <div align="center">
 
-<img src="https://img.shields.io/badge/JARVIS-v1.0.0-blueviolet?style=for-the-badge&logo=robot&logoColor=white" alt="JARVIS v1.0.0"/>
+<img src="https://img.shields.io/badge/JARVIS-v1.1.0-blueviolet?style=for-the-badge&logo=robot&logoColor=white" alt="JARVIS v1.1.0"/>
 
 # JARVIS
 ### *Just A Rather Very Intelligent System*
 
-**A privacy-first AI assistant — voice, CLI, and 19 tools in one package.**
+**A privacy-first AI assistant — voice, CLI, bring-your-own API key (Groq/OpenRouter/Google), and 19 tools.**
 
 <br/>
 
@@ -36,25 +36,32 @@
 ### Install
 
 ```bash
+# From PyPI
+pip install jarvise
+
+# With everything (voice + google + microsoft + browser)
+pip install "jarvise[all]"
+
+# From source
 cd JARVISE
 python -m venv .venv
-
-# Windows
-.venv\Scripts\activate
-
-# Linux / macOS
-source .venv/bin/activate
-
+# Windows: .venv\Scripts\activate
+# Linux/macOS: source .venv/bin/activate
 pip install -r requirements.txt
 ```
 
 ### First Run
 
 ```bash
-# Cloud LLM (Groq) + Voice — recommended for first try
-python main.py --way
+# 1. Open the interactive tutorial (full flow + all commands)
+jarvise -tutorial
 
-# Select option 1 (groq), enter your API key, enter model: qwen/qwen3.8-27b
+# 2. Cloud LLM (Groq) + Voice — recommended for first try
+jarvise --way
+# Select option 1 (groq), enter your API key, model: qwen/qwen3.8-27b
+
+# 3. Everyday use — auto-detects best local model
+jarvise
 ```
 
 ---
@@ -65,14 +72,17 @@ python main.py --way
 
 | Command | Description |
 |---------|-------------|
-| `python main.py --way` | Interactive cloud provider selection (Groq/OpenRouter/Google) |
-| `python main.py --way --text-only` | Cloud LLM, text-only (no mic/speaker) |
-| `python main.py --model` | Auto-detect best local Ollama model for your hardware |
-| `python main.py --ollama3.2 -run` | Pull llama3.2 if needed, then run locally |
-| `python main.py --qwen2.5-coder:7b -run` | Pull and run a specific Ollama model |
-| `python main.py --verbose` | Show detailed logs (STT, TTS, LLM timing) |
-| `python main.py --text-only` | Text input only (no voice pipeline) |
-| `python main.py --disable-router` | Skip command router, always use LLM |
+| `jarvise -tutorial` | **Open interactive tutorial in browser** |
+| `jarvise --way` | Interactive cloud provider selection (Groq/OpenRouter/Google) |
+| `jarvise --way --text-only` | Cloud LLM, text-only (no mic/speaker) |
+| `jarvise --model` | Auto-detect best local Ollama model for your hardware |
+| `jarvise --ollama3.2 -run` | Pull llama3.2 if needed, then run locally |
+| `jarvise --qwen2.5-coder:7b -run` | Pull and run a specific Ollama model |
+| `jarvise --verbose` | Show detailed logs (STT, TTS, LLM timing) |
+| `jarvise --text-only` | Text input only (no voice pipeline) |
+| `jarvise --disable-router` | Skip command router, always use LLM |
+| `jarvis` | Alias of `jarvise` |
+| `python main.py --way` | Same as `jarvise --way` (run from source) |
 
 ### Voice Commands (while running)
 

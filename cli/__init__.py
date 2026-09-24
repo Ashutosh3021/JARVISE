@@ -2,7 +2,7 @@
 JARVIS CLI Package
 """
 
-__version__ = "1.0.0"
+__version__ = "1.1.0"
 
 from cli.client import JarvisClient
 from cli.shell import simple_shell
